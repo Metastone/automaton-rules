@@ -7,7 +7,13 @@ fn main() {
     loop {
         match lexer.get_next_token() {
             Ok(token) => {
-                println!("{}", token);
+                if token.is_empty() {
+                    println!("No token available, end of file reached.");
+                    break;
+                }
+                else {
+                    println!("{}", token);
+                }
             },
             Err(error) => {
                 println!("{}", error);

@@ -4,6 +4,6 @@ states {
 }
 
 transitions {
-    (alive, dead, alive < 2 || alive > 3)
-    (dead, alive, alive == 3)
+    (alive, dead, alive < 2 || alive > 3),
+    (dead, alive, alive == 3),
 }
