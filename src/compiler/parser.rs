@@ -1,5 +1,8 @@
+/// This module provides syntax analysis functions
+
 use crate::compiler::lexer::{Token, Lexer};
 
+#[derive(Clone)]
 pub enum ComparisonOperator {
     Greater,
     Lesser,
@@ -9,6 +12,7 @@ pub enum ComparisonOperator {
     Different
 }
 
+#[derive(Clone)]
 pub enum NeighborCell {
     A,
     B,
@@ -25,29 +29,35 @@ pub enum BooleanOperator {
     Or
 }
 
-pub enum NextCondition {
-    NextCondition(BooleanOperator, Box<Condition>),
-    NextTransition(Box<Transition>)
+pub enum NextConditionNode {
+    NextCondition(BooleanOperator, Box<ConditionNode>),
+    NextTransition(Box<TransitionNode>)
 }
 
-pub enum Condition {
-    QuantityCondition(String, ComparisonOperator, u8, NextCondition),
-    PositionCondition(NeighborCell, String, NextCondition),
-    True(NextCondition)
+pub enum ConditionNode {
+    QuantityCondition(String, ComparisonOperator, u8, NextConditionNode),
+    NeighborCondition(NeighborCell, String, NextConditionNode),
+    True(NextConditionNode)
 }
 
-pub enum Transition {
-    Transition(String, String, Box<Condition>),
+pub enum TransitionNode {
+    Transition(String, String, Box<ConditionNode>),
     End
 }
 
-pub enum State {
-    State(String, u8, u8, u8, Box<State>),
-    Next(Transition)
+pub enum StateNode {
+    State(String, u8, u8, u8, Box<StateNode>),
+    Next(TransitionNode)
 }
 
-type Ast = State;
+pub type Ast = StateNode;
 
+/// Parses the file to create an AST that matches the automaton description language grammar.
+/// If an error occurs, the parsing is stopped and the error is returned.
+///
+/// Two main types of errors can be generated :
+///     - lexical error if the error occurred in the lexical analyzer (lexer)
+///     - syntax error if the file does not match the grammar
 pub fn parse(file_name: &str) -> Result<Ast, String> {
     let mut lexer: Lexer;
     match Lexer::new(file_name) {
@@ -60,7 +70,7 @@ pub fn parse(file_name: &str) -> Result<Ast, String> {
     parse_state(&mut lexer)
 }
 
-fn parse_state(lexer: &mut Lexer) -> Result<State, String> {
+fn parse_state(lexer: &mut Lexer) -> Result<StateNode, String> {
     let token = expect(lexer, vec!["(", "}"])?;
     if token == "(" {
         let state_name = expect_identifier(lexer)?;
@@ -72,42 +82,42 @@ fn parse_state(lexer: &mut Lexer) -> Result<State, String> {
         let blue = expect_u8(lexer)?;
         expect(lexer, vec![")"])?;
         expect(lexer, vec![","])?;
-        Ok(State::State(state_name, red, green, blue, Box::new(parse_state(lexer)?)))
+        Ok(StateNode::State(state_name, red, green, blue, Box::new(parse_state(lexer)?)))
     } else {
         expect(lexer, vec!["transitions"])?;
         expect(lexer, vec!["{"])?;
-        Ok(State::Next(parse_transitions(lexer)?))
+        Ok(StateNode::Next(parse_transitions(lexer)?))
     }
 }
 
-fn parse_transitions(lexer: &mut Lexer) -> Result<Transition, String> {
+fn parse_transitions(lexer: &mut Lexer) -> Result<TransitionNode, String> {
     let token = expect(lexer, vec!["(", "}"])?;
     if token == "(" {
         let initial_state_name = expect_identifier(lexer)?;
         expect(lexer, vec![","])?;
         let next_state_name = expect_identifier(lexer)?;
         expect(lexer, vec![","])?;
-        Ok(Transition::Transition(initial_state_name, next_state_name, Box::new(parse_condition(lexer)?)))
+        Ok(TransitionNode::Transition(initial_state_name, next_state_name, Box::new(parse_condition(lexer)?)))
     }
     else {
-        Ok(Transition::End)
+        Ok(TransitionNode::End)
     }
 }
 
-fn parse_condition(lexer: &mut Lexer) -> Result<Condition, String> {
+fn parse_condition(lexer: &mut Lexer) -> Result<ConditionNode, String> {
     let token = lexer.get_next_token()?;
     if token.str == "true" {
-        Ok(Condition::True(parse_next_condition(lexer)?))
+        Ok(ConditionNode::True(parse_next_condition(lexer)?))
     }
     else if let Some(neighbor_cell) = to_neighbor_cell(&token) {
         expect_is(lexer)?;
         let state_name = expect_identifier(lexer)?;
-        Ok(Condition::PositionCondition(neighbor_cell, state_name, parse_next_condition(lexer)?))
+        Ok(ConditionNode::NeighborCondition(neighbor_cell, state_name, parse_next_condition(lexer)?))
     }
     else if is_identifier(&token) {
         let comparison_operator = expect_comparison_operator(lexer)?;
         let number = expect_neighbor_number(lexer)?;
-        Ok(Condition::QuantityCondition(token.str, comparison_operator, number, parse_next_condition(lexer)?))
+        Ok(ConditionNode::QuantityCondition(token.str, comparison_operator, number, parse_next_condition(lexer)?))
     }
     else {
         Err(format!("Expected either token \"true\", a neighbor cell identifier \
@@ -115,14 +125,14 @@ fn parse_condition(lexer: &mut Lexer) -> Result<Condition, String> {
     }
 }
 
-fn parse_next_condition(lexer: &mut Lexer) -> Result<NextCondition, String> {
+fn parse_next_condition(lexer: &mut Lexer) -> Result<NextConditionNode, String> {
     let token = lexer.get_next_token()?;
     if let Some(boolean_operator) = to_boolean_operator(&token) {
-        Ok(NextCondition::NextCondition(boolean_operator, Box::new(parse_condition(lexer)?)))
+        Ok(NextConditionNode::NextCondition(boolean_operator, Box::new(parse_condition(lexer)?)))
     }
     else if token.str == ")" {
         expect(lexer, vec![","])?;
-        Ok(NextCondition::NextTransition(Box::new(parse_transitions(lexer)?)))
+        Ok(NextConditionNode::NextTransition(Box::new(parse_transitions(lexer)?)))
     }
     else {
         Err(format!("Expected either a boolean operator \"&&\", \"||\" or a \")\" token, found {}.", token))
@@ -298,7 +308,7 @@ mod tests {
     }
 
     #[test]
-    fn parse_expect_neigbhor_number_fails() {
+    fn parse_expect_neighbor_number_fails() {
          match parse(EXPECT_NEIGHBOR_NB_FILE) {
             Err(error) => assert_eq!(error, "Expected an integer between 0 and 8, found \"22\" - line 7, column 28."),
             _ => assert!(false)

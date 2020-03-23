@@ -1,3 +1,5 @@
+/// This module provides lexical analysis functions
+
 use std::fs::File;
 use std::io;
 use std::io::{BufReader, Read, Seek, SeekFrom};

@@ -1,10 +1,14 @@
 mod compiler;
 
-use compiler::parser;
+use compiler::semantic;
 
 fn main() {
-    match parser::parse("/home/metastone/Documents/projects/mutations/resources/game_of_life.txt") {
+    match semantic::parse("/home/metastone/Documents/projects/mutations/resources/game_of_life.txt") {
         Ok(_) => { println!("Success"); },
-        Err(error) => { println!("{}", error); }
+        Err(errors) => {
+            for i in 0..errors.len() {
+                println!("ERROR : {}", errors[i]);
+            }
+        }
     }
 }
