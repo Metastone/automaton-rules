@@ -95,24 +95,31 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
     loop {
         let (condition, next_condition_node) = match curr_condition_node {
             ConditionNode::QuantityCondition(state_name, comp_op, quantity, next_condition_node) => {
-                if !states.contains_key(state_name) {
+               if !states.contains_key(state_name) {
                     errors.push(condition_undefined_state_error(state_name));
                 }
                 (Condition::QuantityCondition(state_name.clone(), comp_op.clone(), quantity.clone()), next_condition_node)
             },
             ConditionNode::NeighborCondition(cell, state_name, next_condition_node) => {
-                if !states.contains_key(state_name) {
+               if !states.contains_key(state_name) {
                     errors.push(condition_undefined_state_error(state_name))
                 }
                 (Condition::NeighborCondition(cell.clone(), state_name.clone()), next_condition_node)
             },
-            // TODO manage 'true' case : should be unique
             ConditionNode::True(next_condition_node) => {
-                (Condition::True, next_condition_node)
+               (Condition::True, next_condition_node)
             }
         };
 
         curr_condition_conjunction.push(condition);
+
+        let condition_is_true = if let ConditionNode::True(_) = curr_condition_node { true } else { false };
+        let conditions_before = curr_condition_conjunction.len() > 1 || processed_condition.len() > 0;
+        let conditions_after = if let NextConditionNode::NextCondition(_,_) = next_condition_node { true } else { false };
+        if condition_is_true && (conditions_before || conditions_after) {
+            println!("len conj {}, len all {}, conditions_after {}", curr_condition_conjunction.len(), processed_condition.len(), conditions_after);
+            errors.push(condition_true_error());
+        }
 
         match next_condition_node {
             NextConditionNode::NextCondition(bool_op, condition_node) => {
@@ -142,4 +149,8 @@ fn transition_undefined_state_error(state_origin: & String,
 
 fn condition_undefined_state_error(state_name: & String) -> String {
     format!("A condition refers to the state {}, but it's not defined.", state_name)
+}
+
+fn condition_true_error() -> String {
+    "The \"true\" condition should not be alone, not combined with other conditions.".to_string()
 }
