@@ -1,0 +1,7 @@
+states {
+}
+
+transitions {
+    (alive, dead, true && alive == 0),
+    (dead, alive, alive == 3 && A is dead || E is alive),
+}

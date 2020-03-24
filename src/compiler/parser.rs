@@ -244,7 +244,7 @@ fn to_neighbor_cell(token: & Token) -> Option<NeighborCell> {
 mod tests {
     use crate::compiler::parser::parse;
 
-    static BENCHMARK_FILE: &str = "resources/tests/parser_benchmark.txt";
+    static BENCHMARK_FILE: &str = "resources/tests/compiler_benchmark.txt";
     static NON_EXISTING_FILE: &str = "resources/tests/does_not_exist.txt";
     static COND_ERROR_FILE: &str = "resources/tests/parser_condition_error.txt";
     static EXPECT_COMP_OP_FILE: &str = "resources/tests/parser_expected_comparison_operator.txt";

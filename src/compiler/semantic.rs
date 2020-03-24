@@ -66,7 +66,7 @@ fn semantic_analysis(ast: & Ast) -> Result<Automaton, Vec<String>> {
                     errors.push(transition_undefined_state_error(state_origin, state_destination, state_origin));
                 }
                 if !states.contains_key(state_destination) {
-                    errors.push(transition_undefined_state_error(state_origin, state_destination, state_origin));
+                    errors.push(transition_undefined_state_error(state_origin, state_destination, state_destination));
                 }
                 let (transition_node, processed_condition) =
                     construct_condition(condition_node, &mut states, &mut errors);
@@ -117,7 +117,6 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
         let conditions_before = curr_condition_conjunction.len() > 1 || processed_condition.len() > 0;
         let conditions_after = if let NextConditionNode::NextCondition(_,_) = next_condition_node { true } else { false };
         if condition_is_true && (conditions_before || conditions_after) {
-            println!("len conj {}, len all {}, conditions_after {}", curr_condition_conjunction.len(), processed_condition.len(), conditions_after);
             errors.push(condition_true_error());
         }
 
@@ -144,13 +143,97 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
 fn transition_undefined_state_error(state_origin: & String,
                                     state_destination: & String,
                                     undefined: & String) -> String {
-    format!("The transition '{} -> {}' refers to the state {}, but it's not defined.", state_origin, state_destination, undefined)
+    format!("The transition '{} -> {}' refers to the state \"{}\", but it's not defined.", state_origin, state_destination, undefined)
 }
 
 fn condition_undefined_state_error(state_name: & String) -> String {
-    format!("A condition refers to the state {}, but it's not defined.", state_name)
+    format!("A condition refers to the state \"{}\", but it's not defined.", state_name)
 }
 
 fn condition_true_error() -> String {
     "The \"true\" condition should not be alone, not combined with other conditions.".to_string()
+}
+
+#[cfg(test)]
+mod tests {
+    use crate::compiler::semantic::parse;
+
+    static BENCHMARK_FILE: &str = "resources/tests/compiler_benchmark.txt";
+    static CONDITION_UNDEFINED_STATE_FILE: &str = "resources/tests/semantic_condition_undefined_state.txt";
+    static NO_STATES_FILE: &str = "resources/tests/semantic_no_states.txt";
+    static SEVERAL_ERRORS_FILE: &str = "resources/tests/semantic_several_errors.txt";
+    static TRANSITION_UNDEFINED_STATE_FILE: &str = "resources/tests/semantic_transition_undefined_state.txt";
+    static TRUE_ERROR_FILE: &str = "resources/tests/semantic_true_error.txt";
+
+    #[test]
+    fn parse_benchmark_succeeds() {
+        match parse(BENCHMARK_FILE) {
+            Ok(_) => assert!(true),
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_condition_undefined_state_fails() {
+        match parse(CONDITION_UNDEFINED_STATE_FILE) {
+            Err(errors) => {
+                assert_eq!(errors.len(), 1);
+                assert_eq!(errors[0], "A condition refers to the state \"happy\", but it\'s not defined.");
+            },
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_no_states_fails() {
+        match parse(NO_STATES_FILE) {
+            Err(errors) => {
+                assert_eq!(errors.len(), 1);
+                assert_eq!(errors[0], "You should specify at least one state.");
+            },
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_several_errors_fails() {
+        match parse(SEVERAL_ERRORS_FILE) {
+            Err(errors) => {
+                assert_eq!(errors.len(), 10);
+                assert_eq!(errors[0], "You should specify at least one state.");
+                assert_eq!(errors[1], "The transition \'alive -> dead\' refers to the state \"alive\", but it\'s not defined.");
+                assert_eq!(errors[2], "The transition \'alive -> dead\' refers to the state \"dead\", but it\'s not defined.");
+                assert_eq!(errors[3], "The \"true\" condition should not be alone, not combined with other conditions.");
+                assert_eq!(errors[4], "A condition refers to the state \"alive\", but it\'s not defined.");
+                assert_eq!(errors[5], "The transition \'dead -> alive\' refers to the state \"dead\", but it\'s not defined.");
+                assert_eq!(errors[6], "The transition \'dead -> alive\' refers to the state \"alive\", but it\'s not defined.");
+                assert_eq!(errors[7], "A condition refers to the state \"alive\", but it\'s not defined.");
+                assert_eq!(errors[8], "A condition refers to the state \"dead\", but it\'s not defined.");
+                assert_eq!(errors[9], "A condition refers to the state \"alive\", but it\'s not defined.");
+            },
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_transition_undefined_state_fails() {
+        match parse(TRANSITION_UNDEFINED_STATE_FILE) {
+            Err(errors) => {
+                assert_eq!(errors.len(),  1);
+                assert_eq!(errors[0], "The transition \'happy -> dead\' refers to the state \"happy\", but it\'s not defined.");
+            },
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_true_error_fails() {
+        match parse(TRUE_ERROR_FILE) {
+            Err(errors) => {
+                assert_eq!(errors.len(), 1);
+                assert_eq!(errors[0], "The \"true\" condition should not be alone, not combined with other conditions.");
+            },
+            _ => assert!(false)
+        }
+    }
 }
