@@ -7,14 +7,15 @@ use std::collections::{
     hash_map::RandomState
 };
 
-pub struct Automaton {
+pub struct Rules {
+    pub initial_state: String,
     pub states: HashMap<String, (u8, u8, u8)>,
     pub transitions: Vec<Transition>
 }
 
-type Transition = (String, String, Vec<ConditionsConjunction>);
+pub type Transition = (String, String, Vec<ConditionsConjunction>);
 
-type ConditionsConjunction = Vec<Condition>;
+pub type ConditionsConjunction = Vec<Condition>;
 
 pub enum Condition {
     QuantityCondition(String, ComparisonOperator, u8),
@@ -22,23 +23,27 @@ pub enum Condition {
     True
 }
 
-/// Parses the file and returns a data structure that represents the automaton described in the file.
+/// Parses the file and returns a data structure that represents the automaton's rules described in the file.
 ///
 /// If it finds a lexical or syntax error, the parsing is stopped and the error is returned.
 /// Otherwise, it performs a semantic analysis. If the semantic analysis fails, returns the list of semantic errors.
-pub fn parse(file_name: &str) -> Result<Automaton, Vec<String>> {
+pub fn parse(file_name: &str) -> Result<Rules, Vec<String>> {
     match parser::parse(file_name) {
         Ok(ast) => semantic_analysis(&ast),
         Err(error) => Err(vec![error])
     }
 }
 
-fn semantic_analysis(ast: & Ast) -> Result<Automaton, Vec<String>> {
+fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
     let mut errors = Vec::new();
 
-    if let StateNode::Next(_) = ast {
-        errors.push("You should specify at least one state.".to_string());
-    }
+    let mut initial_state = match ast {
+        StateNode::State(state, _, _, _, _) => state.clone(),
+        StateNode::Next(_) => {
+            errors.push("You should specify at least one state.".to_string());
+            "".to_string()
+        }
+    };
 
     let mut states = HashMap::new();
     let mut curr_state_node = ast;
@@ -80,7 +85,7 @@ fn semantic_analysis(ast: & Ast) -> Result<Automaton, Vec<String>> {
     }
 
     match errors.len() {
-        0 => Ok(Automaton { states, transitions }),
+        0 => Ok(Rules { initial_state, states, transitions }),
         _ => Err(errors)
     }
 }
