@@ -13,7 +13,7 @@ pub struct Automaton {
 
 impl Automaton {
     pub fn new(rules: Rules) -> Automaton {
-        let size = (200, 100);
+        let size = (200, 50);
         let initial_state = rules.initial_state.clone();
         let mut grid = vec![initial_state; (size.0+2)*(size.1+2)];
         for x in 0..(size.0+2) {

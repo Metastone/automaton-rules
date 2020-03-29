@@ -1,49 +1,48 @@
-use crate::automaton::Automaton;
-use crate::camera::Camera;
 use std::io::stdout;
 use std::io::Write;
 use termion;
 
 pub struct Display {
-    size: (usize, usize)
+    last_image: Vec<Vec<(u8, u8, u8)>>
 }
 
 impl Display {
-    pub fn new(camera: &Camera) -> Display {
+    pub fn new() -> Display {
         Display {
-            size: camera.get_size().clone()
+            last_image: Vec::new()
         }
     }
 
     pub fn init(&self) {
         print!("{}", termion::clear::All);
-        for x in 0..self.size.0 {
-            for y in 0..self.size.1 {
-                print!("{}{}\u{2588}",
-                       termion::cursor::Goto((x + 1) as u16, (y + 1) as u16),
-                       termion::color::Fg(termion::color::White));
-            }
-        }
         stdout().flush().unwrap();
     }
 
-    pub fn render(&mut self, camera: &Camera, automaton: &Automaton) {
-        let grid = automaton.get_grid();
-        let size = automaton.get_size();
-        for x in 1..(size.0+1) {
-            for y in 1..(size.1+1) {
-                let state_name = &grid[y*(size.0+2) + x];
-                let (r, g, b) = automaton.get_color(state_name);
-                print!("{}{}\u{2588}",
-                       termion::cursor::Goto(x as u16, y as u16),
-                       termion::color::Fg(termion::color::AnsiValue::rgb(to_ansi_value(r), to_ansi_value(g), to_ansi_value(b))));
+    pub fn render(&mut self, image: &Vec<Vec<(u8, u8, u8)>>) {
+        /* Note : I deliberately ignore the case where the number of lines or columns of the image is 0.
+         * It doesn't make any sense anyway (should be forbidden at configuration level). */
+
+        if (image.len() != self.last_image.len()) || (image[0].len() != self.last_image[0].len()) {
+            self.last_image = vec![vec![(0, 0, 0); image[0].len()]; image.len()];
+        }
+
+        for x in 0..image.len() {
+            for y in 0..image[0].len() {
+                if image[x][y] != self.last_image[x][y] {
+                    let (r, g, b) = image[x][y];
+                    print!("{}{}\u{2588}",
+                           termion::cursor::Goto((x + 1) as u16, (y + 1) as u16),
+                           termion::color::Fg(termion::color::AnsiValue::rgb(to_ansi_value(r), to_ansi_value(g), to_ansi_value(b))));
+                    self.last_image[x][y] = image[x][y].clone();
+                }
             }
         }
         stdout().flush().unwrap();
     }
 
     pub fn clean(&mut self) {
-        print!("{}", termion::cursor::Goto(1, (self.size.1 + 1) as u16));
+        let cursor_vert_pos = if self.last_image.len() == 0 { 1 } else { self.last_image[0].len() + 1 };
+        print!("{}{}", termion::cursor::Goto(1, cursor_vert_pos as u16), termion::color::Fg(termion::color::White));
         stdout().flush().unwrap();
     }
 }
