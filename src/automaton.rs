@@ -15,21 +15,13 @@ impl Automaton {
     pub fn new(rules: Rules) -> Automaton {
         let size = (200, 50);
         let initial_state = rules.initial_state.clone();
-        let mut grid = vec![initial_state; (size.0+2)*(size.1+2)];
-        for x in 0..(size.0+2) {
-            grid[x] = "".to_string();
-            grid[(size.1+1) * (size.0+2) + x] = "".to_string();
-        }
-        for y in 0..(size.1+2) {
-            grid[y * (size.0+2)] = "".to_string();
-            grid[y * (size.0+2) + size.0 + 1] = "".to_string();
-        }
+        let mut grid = vec![initial_state; size.0 * size.1];
         let mut rng = rand::thread_rng();
-        for x in 1..(size.0+1) {
-            for y in 1..(size.1+1) {
+        for x in 0..size.0 {
+            for y in 0..size.1 {
                 let r: f32 = rng.gen();
                 if r > 0.5 {
-                    let index = y*(size.0+2) + x;
+                    let index = y * size.0 + x;
                     grid[index] = "dead".to_string();
                 }
             }
@@ -45,9 +37,9 @@ impl Automaton {
     }
 
     pub fn tick(&mut self) {
-        for x in 1..(self.size.0+1) {
-            for y in 1..(self.size.1+1) {
-                let index = y*(self.size.0+2) + x;
+        for x in 0..self.size.0 {
+            for y in 0..self.size.1 {
+                let index = self.get_index(x as i32, y as i32);
                 let state_name = self.grid[index].clone();
                 for (state_origin, state_destination, conditions) in &self.rules.transitions {
                     if state_origin == &state_name {
@@ -61,7 +53,7 @@ impl Automaton {
                                         for u in -1..2 {
                                             for v in -1..2 {
                                                 if u != 0 || v != 0 {
-                                                    let index_2 = ((y as i32 + v) as usize)*(self.size.0+2) + ((x as i32 + u) as usize);
+                                                    let index_2 =  self.get_index(x as i32 + u, y as i32 + v);
                                                     if &self.grid[index_2] == state {
                                                         count += 1;
                                                     }
@@ -82,16 +74,7 @@ impl Automaton {
                                         }
                                     },
                                     Condition::NeighborCondition(neighbor, state) => {
-                                        let index = match neighbor {
-                                            NeighborCell::A => (y-1) * (self.size.0+2) + x-1,
-                                            NeighborCell::B => (y-1) * (self.size.0+2) + x,
-                                            NeighborCell::C => (y-1) * (self.size.0+2) + x+1,
-                                            NeighborCell::D => y * (self.size.0+2) + x-1,
-                                            NeighborCell::E => y * (self.size.0+2) + x+1,
-                                            NeighborCell::F => (y+1) * (self.size.0+2) + x-1,
-                                            NeighborCell::G => (y+1) * (self.size.0+2) + x,
-                                            NeighborCell::H => (y+1) * (self.size.0+2) + x+1
-                                        };
+                                        let index = self.get_index_of_neighbor(x as i32, y as i32, neighbor);
                                         if &self.grid[index] != state {
                                             conjunction_evaluation = false;
                                             break;
@@ -116,11 +99,38 @@ impl Automaton {
             }
         }
 
-        for x in 1..(self.size.0+1) {
-            for y in 1..(self.size.1+1) {
-                let index = y*(self.size.0+2) + x;
+        for x in 0..self.size.0 {
+            for y in 0..self.size.1 {
+                let index = self.get_index(x as i32, y as i32);
                 self.grid[index] = self.grid_next[index].clone();
             }
+        }
+    }
+
+    fn get_index_of_neighbor(& self, x: i32, y: i32, neighbor: &NeighborCell) -> usize {
+        let (x_n, y_n) = match neighbor {
+            NeighborCell::A => (x - 1, y - 1),
+            NeighborCell::B => (x, y - 1),
+            NeighborCell::C => (x + 1, y - 1),
+            NeighborCell::D => (x - 1, y),
+            NeighborCell::E => (x + 1, y),
+            NeighborCell::F => (x - 1, y + 1),
+            NeighborCell::G => (x, y + 1),
+            NeighborCell::H => (x + 1, y + 1)
+        };
+        self.get_index(x_n, y_n)
+    }
+
+    fn get_index(&self, x: i32, y: i32) -> usize {
+        Self::tore_correction(y, self.size.1) * self.size.0 + Self::tore_correction(x, self.size.0)
+    }
+
+    /// The world is a tore, so when x or y seems to be further than a boundary, it means it should be at the other end.
+    fn tore_correction(value: i32, upper_bound: usize) -> usize {
+         match value {
+            -1 => upper_bound - 1,
+            _ if value == upper_bound as i32 => 0,
+            _ => value as usize
         }
     }
 

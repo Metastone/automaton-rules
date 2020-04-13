@@ -20,10 +20,10 @@ impl Camera {
         let grid = automaton.get_grid();
         let size = automaton.get_size();
 
-        for x in 1..(size.0+1) {
+        for x in 0..size.0 {
             let mut column = Vec::new();
-            for y in 1..(size.1 + 1) {
-                let state_name = &grid[y * (size.0 + 2) + x];
+            for y in 0..size.1 {
+                let state_name = &grid[y * size.0 + x];
                 column.push(automaton.get_color(state_name));
             }
             image.push(column);

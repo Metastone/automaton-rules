@@ -10,7 +10,7 @@ mod camera;
 mod display;
 mod inputs;
 
-use std::time::Instant;
+use std::time::{Instant, Duration};
 use std::thread::sleep;
 use compiler::semantic::{Rules, parse};
 use automaton::Automaton;
@@ -22,7 +22,6 @@ use inputs::{Inputs, UserAction};
 // TODO Capture an image with camera and change only if necessary.
 // TODO index states by int, not String
 // TODO find a way to represent initial state
-// TODO make the world a tore
 // TODO increase performances by avoiding having to recompute the colors in display for each cell
 // TODO really use camera size and position
 // TODO implement camera translation
@@ -71,7 +70,7 @@ fn run(rules: Rules) {
         let image = camera.capture(&automaton);
         display.render(&image);
         automaton.tick();
-//        sleep(Duration::from_millis(10));
+        sleep(Duration::from_millis(10));
 
         i += 1;
     }
