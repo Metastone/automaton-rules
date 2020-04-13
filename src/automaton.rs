@@ -2,8 +2,6 @@ use crate::compiler::semantic::{Rules, Condition};
 use crate::compiler::parser::{NeighborCell, ComparisonOperator};
 use rand::Rng;
 
-type StateId = usize;
-
 pub struct Automaton {
     size: (usize, usize),
     grid: Vec<String>,
@@ -39,7 +37,7 @@ impl Automaton {
     pub fn tick(&mut self) {
         for x in 0..self.size.0 {
             for y in 0..self.size.1 {
-                let index = self.get_index(x as i32, y as i32);
+                let index = self.get_index(x as isize, y as isize);
                 let state_name = self.grid[index].clone();
                 for (state_origin, state_destination, conditions) in &self.rules.transitions {
                     if state_origin == &state_name {
@@ -53,7 +51,7 @@ impl Automaton {
                                         for u in -1..2 {
                                             for v in -1..2 {
                                                 if u != 0 || v != 0 {
-                                                    let index_2 =  self.get_index(x as i32 + u, y as i32 + v);
+                                                    let index_2 =  self.get_index(x as isize + u, y as isize + v);
                                                     if &self.grid[index_2] == state {
                                                         count += 1;
                                                     }
@@ -74,7 +72,7 @@ impl Automaton {
                                         }
                                     },
                                     Condition::NeighborCondition(neighbor, state) => {
-                                        let index = self.get_index_of_neighbor(x as i32, y as i32, neighbor);
+                                        let index = self.get_index_of_neighbor(x as isize, y as isize, neighbor);
                                         if &self.grid[index] != state {
                                             conjunction_evaluation = false;
                                             break;
@@ -101,13 +99,13 @@ impl Automaton {
 
         for x in 0..self.size.0 {
             for y in 0..self.size.1 {
-                let index = self.get_index(x as i32, y as i32);
+                let index = self.get_index(x as isize, y as isize);
                 self.grid[index] = self.grid_next[index].clone();
             }
         }
     }
 
-    fn get_index_of_neighbor(& self, x: i32, y: i32, neighbor: &NeighborCell) -> usize {
+    fn get_index_of_neighbor(& self, x: isize, y: isize, neighbor: &NeighborCell) -> usize {
         let (x_n, y_n) = match neighbor {
             NeighborCell::A => (x - 1, y - 1),
             NeighborCell::B => (x, y - 1),
@@ -121,28 +119,24 @@ impl Automaton {
         self.get_index(x_n, y_n)
     }
 
-    fn get_index(&self, x: i32, y: i32) -> usize {
+    fn get_index(&self, x: isize, y: isize) -> usize {
         Self::tore_correction(y, self.size.1) * self.size.0 + Self::tore_correction(x, self.size.0)
     }
 
-    /// The world is a tore, so when x or y seems to be further than a boundary, it means it should be at the other end.
-    fn tore_correction(value: i32, upper_bound: usize) -> usize {
-         match value {
-            -1 => upper_bound - 1,
-            _ if value == upper_bound as i32 => 0,
-            _ => value as usize
+    /// The world is a tore, so the value range can be )-inf; +inf(, and it will be mapped to (0; upper_bound-1).
+    fn tore_correction(value: isize, upper_bound: usize) -> usize {
+        if value >= 0 {
+            (value as usize) % upper_bound
+        }
+        else {
+            let signed_upper_bound = upper_bound as isize;
+            let corrected = signed_upper_bound + (value % signed_upper_bound);
+            corrected as usize
         }
     }
 
-    pub fn get_color(&self, state_name: &String) -> (u8, u8, u8) {
+    pub fn get_color(&self, x: isize, y: isize) -> (u8, u8, u8) {
+        let state_name = &self.grid[self.get_index(x, y)];
         self.rules.states.get(state_name).unwrap().clone()
-    }
-
-    pub fn get_size(&self) -> &(usize, usize) {
-        &self.size
-    }
-
-    pub fn get_grid(&self) -> &Vec<String> {
-        &self.grid
     }
 }

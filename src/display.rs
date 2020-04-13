@@ -49,7 +49,6 @@ impl Display {
 
 /// Map a [0; 255] value to a [0; 5] value
 fn to_ansi_value(x: u8) -> u8 {
-    // use f32 so that is works on 32 bits systems
-    (x as f32 * 5.0 / 255.0).round() as u8
+    (x as f64 * 5.0 / 255.0).round() as u8
 }
 

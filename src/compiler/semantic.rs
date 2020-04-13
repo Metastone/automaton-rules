@@ -37,7 +37,7 @@ pub fn parse(file_name: &str) -> Result<Rules, Vec<String>> {
 fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
     let mut errors = Vec::new();
 
-    let mut initial_state = match ast {
+    let initial_state = match ast {
         StateNode::State(state, _, _, _, _) => state.clone(),
         StateNode::Next(_) => {
             errors.push("You should specify at least one state.".to_string());

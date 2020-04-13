@@ -1,3 +1,10 @@
+use termion;
+use termion::{
+    AsyncReader,
+    event::Key,
+    input::TermRead
+};
+
 pub enum Direction {
     Right,
     Left,
@@ -13,14 +20,29 @@ pub enum UserAction {
     Nop
 }
 
-pub struct Inputs {}
+pub struct Inputs {
+    keys: termion::input::Keys<AsyncReader>
+}
 
 impl Inputs {
     pub fn new() -> Inputs {
-        Inputs {}
+        Inputs {
+            keys: termion::async_stdin().keys()
+        }
     }
 
     pub fn read_keyboard(&mut self) -> UserAction {
-        UserAction::Nop
+        if let Some(Ok(key)) = self.keys.next() {
+            match key {
+                Key::Esc => UserAction::Quit,
+                Key::Left => UserAction::TranslateCamera(Direction::Left),
+                Key::Right => UserAction::TranslateCamera(Direction::Right),
+                Key::Up => UserAction::TranslateCamera(Direction::Up),
+                Key::Down => UserAction::TranslateCamera(Direction::Down),
+                _ => UserAction::Nop
+            }
+        } else {
+            UserAction::Nop
+        }
     }
 }

@@ -1,6 +1,8 @@
 use crate::automaton::Automaton;
 use crate::inputs::Direction;
 
+const TRANSLATION_OFFSET: usize = 1;
+
 /// The camera's (0,0) position is at the upper-left of the field of view.
 pub struct Camera {
     position: (isize, isize),
@@ -17,14 +19,12 @@ impl Camera {
 
     pub fn capture(&self, automaton: &Automaton) -> Vec<Vec<(u8, u8, u8)>> {
         let mut image = Vec::new();
-        let grid = automaton.get_grid();
-        let size = automaton.get_size();
-
-        for x in 0..size.0 {
+        for x_c in 0..self.size.0 {
             let mut column = Vec::new();
-            for y in 0..size.1 {
-                let state_name = &grid[y * size.0 + x];
-                column.push(automaton.get_color(state_name));
+            for y_c in 0..self.size.1 {
+                let x = x_c as isize + self.position.0;
+                let y = y_c as isize + self.position.1;
+                column.push(automaton.get_color(x, y));
             }
             image.push(column);
         }
@@ -32,9 +32,12 @@ impl Camera {
         image
     }
 
-    pub fn translate(&mut self, direction: &Direction) {}
-
-    pub fn get_position(& self) -> &(isize, isize) {
-        &self.position
+    pub fn translate(&mut self, direction: &Direction) {
+        match direction {
+            Direction::Left => { self.position.0 -= TRANSLATION_OFFSET as isize; }
+            Direction::Right => { self.position.0 += TRANSLATION_OFFSET as isize; }
+            Direction::Up => { self.position.1 -= TRANSLATION_OFFSET as isize; }
+            Direction::Down => { self.position.1 += TRANSLATION_OFFSET as isize; }
+        }
     }
 }

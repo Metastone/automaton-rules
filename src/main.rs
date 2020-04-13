@@ -12,19 +12,18 @@ mod inputs;
 
 use std::time::{Instant, Duration};
 use std::thread::sleep;
+use std::io;
 use compiler::semantic::{Rules, parse};
 use automaton::Automaton;
 use camera::Camera;
 use display::Display;
 use inputs::{Inputs, UserAction};
+use termion::raw::IntoRawMode;
 
 // TODO Make traits for inputs and display in order to allow different displays.
-// TODO Capture an image with camera and change only if necessary.
 // TODO index states by int, not String
 // TODO find a way to represent initial state
 // TODO increase performances by avoiding having to recompute the colors in display for each cell
-// TODO really use camera size and position
-// TODO implement camera translation
 // TODO implement pause
 
 fn main() {
@@ -51,12 +50,13 @@ fn run(rules: Rules) {
     let mut display = Display::new();
     let mut inputs = Inputs::new();
 
+    let _stdout = io::stdout().into_raw_mode().unwrap();
     display.init();
 
     let start = Instant::now();
     let mut i = 0;
 
-    while i < 1000 {
+    while i < 2000 {
         match inputs.read_keyboard() {
             UserAction::TranslateCamera(direction) => { camera.translate(&direction); },
             UserAction::TogglePause => { /* TODO */ },
