@@ -2,10 +2,6 @@
 
 use crate::compiler::parser;
 use crate::compiler::parser::*;
-use std::collections::{
-    HashMap,
-    hash_map::RandomState
-};
 
 pub struct State {
     pub name: String,
@@ -40,15 +36,13 @@ pub fn parse(file_name: &str) -> Result<Rules, Vec<String>> {
 
 fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
     let mut errors = Vec::new();
-    let mut state_index: usize = 0;
+    let mut states = Vec::new();
+    let mut curr_state_node = ast;
+    let mut curr_transition_node: &TransitionNode;
 
     if let StateNode::Next(_) = ast {
         errors.push("You should specify at least one state.".to_string());
     }
-
-    let mut states = Vec::new();
-    let mut curr_state_node = ast;
-    let mut curr_transition_node: &TransitionNode;
 
     loop {
         match curr_state_node {
