@@ -24,7 +24,6 @@ use termion::raw::IntoRawMode;
 // TODO index states by int, not String
 // TODO find a way to represent initial state
 // TODO increase performances by avoiding having to recompute the colors in display for each cell
-// TODO implement pause
 
 fn main() {
     env_logger::init();
@@ -53,13 +52,22 @@ fn run(rules: Rules) {
     let _stdout = io::stdout().into_raw_mode().unwrap();
     display.init();
 
-    let start = Instant::now();
+    let mut start = Instant::now();
+    let mut runtime_duration = Duration::new(0, 0);
     let mut i = 0;
+    let mut pause = false;
 
-    while i < 2000 {
+    while i < 300 {
         match inputs.read_keyboard() {
             UserAction::TranslateCamera(direction) => { camera.translate(&direction); },
-            UserAction::TogglePause => { /* TODO */ },
+            UserAction::TogglePause => {
+                pause = !pause;
+                if pause {
+                    runtime_duration += start.elapsed();
+                } else {
+                    start = Instant::now();
+                }
+            },
             UserAction::ChangeSimulationSpeed => { /* TODO */ },
             UserAction::Quit => {
                 break;
@@ -67,15 +75,17 @@ fn run(rules: Rules) {
             UserAction::Nop => {}
         }
 
-        let image = camera.capture(&automaton);
-        display.render(&image);
-        automaton.tick();
-        sleep(Duration::from_millis(10));
-
-        i += 1;
+        if !pause {
+            let image = camera.capture(&automaton);
+            display.render(&image);
+            automaton.tick();
+            sleep(Duration::from_millis(10));
+            i += 1;
+        }
     }
 
     display.clean();
 
-    println!("Over. {} iterations / s", (i as f32 / start.elapsed().as_millis() as f32)*1000.0);
+    runtime_duration += start.elapsed();
+    println!("Over. {} iterations / s", (i as f32 / runtime_duration.as_millis() as f32)*1000.0);
 }

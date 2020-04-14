@@ -39,6 +39,7 @@ impl Inputs {
                 Key::Right => UserAction::TranslateCamera(Direction::Right),
                 Key::Up => UserAction::TranslateCamera(Direction::Up),
                 Key::Down => UserAction::TranslateCamera(Direction::Down),
+                Key::Char('p') => UserAction::TogglePause,
                 _ => UserAction::Nop
             }
         } else {
