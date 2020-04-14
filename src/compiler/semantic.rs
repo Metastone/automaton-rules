@@ -7,19 +7,23 @@ use std::collections::{
     hash_map::RandomState
 };
 
+pub struct State {
+    pub name: String,
+    pub color: (u8, u8, u8)
+}
+
 pub struct Rules {
-    pub initial_state: String,
-    pub states: HashMap<String, (u8, u8, u8)>,
+    pub states: Vec<State>,
     pub transitions: Vec<Transition>
 }
 
-pub type Transition = (String, String, Vec<ConditionsConjunction>);
+pub type Transition = (usize, usize, Vec<ConditionsConjunction>);
 
 pub type ConditionsConjunction = Vec<Condition>;
 
 pub enum Condition {
-    QuantityCondition(String, ComparisonOperator, u8),
-    NeighborCondition(NeighborCell, String),
+    QuantityCondition(usize, ComparisonOperator, u8),
+    NeighborCondition(NeighborCell, usize),
     True
 }
 
@@ -36,23 +40,23 @@ pub fn parse(file_name: &str) -> Result<Rules, Vec<String>> {
 
 fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
     let mut errors = Vec::new();
+    let mut state_index: usize = 0;
 
-    let initial_state = match ast {
-        StateNode::State(state, _, _, _, _) => state.clone(),
-        StateNode::Next(_) => {
-            errors.push("You should specify at least one state.".to_string());
-            "".to_string()
-        }
-    };
+    if let StateNode::Next(_) = ast {
+        errors.push("You should specify at least one state.".to_string());
+    }
 
-    let mut states = HashMap::new();
+    let mut states = Vec::new();
     let mut curr_state_node = ast;
     let mut curr_transition_node: &TransitionNode;
 
     loop {
         match curr_state_node {
             StateNode::State(name, red, green, blue, state_node) => {
-                states.insert(name.clone(), (red.clone(), green.clone(), blue.clone()));
+                states.push(State {
+                    name: name.clone(),
+                    color: (red.clone(), green.clone(), blue.clone())
+                });
                 curr_state_node = state_node.as_ref();
             },
             StateNode::Next(t) => {
@@ -66,17 +70,24 @@ fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
 
     loop {
         match curr_transition_node {
-            TransitionNode::Transition(state_origin, state_destination, condition_node) => {
-                if !states.contains_key(state_origin) {
-                    errors.push(transition_undefined_state_error(state_origin, state_destination, state_origin));
-                }
-                if !states.contains_key(state_destination) {
-                    errors.push(transition_undefined_state_error(state_origin, state_destination, state_destination));
-                }
-                let (transition_node, processed_condition) =
-                    construct_condition(condition_node, &mut states, &mut errors);
-                transitions.push((state_origin.clone(), state_destination.clone(), processed_condition));
+            TransitionNode::Transition(state_origin_name, state_destination_name, condition_node) => {
+                let state_origin = match get_state_index(state_origin_name, &states) {
+                    Some(index) => index,
+                    _ => {
+                        errors.push(transition_undefined_state_error(state_origin_name, state_destination_name, state_origin_name));
+                        0   // whatever is the number here, it won't be used because an error occurred
+                    }
+                };
+                let state_destination = match get_state_index(state_destination_name, &states) {
+                    Some(index) => index,
+                    _ => {
+                        errors.push(transition_undefined_state_error(state_origin_name, state_destination_name, state_destination_name));
+                        0   // whatever is the number here, it won't be used because an error occurred
+                    }
+                };
+                let (transition_node, processed_condition) = construct_condition(condition_node, &mut states, &mut errors);
                 curr_transition_node = transition_node;
+                transitions.push((state_origin, state_destination, processed_condition));
             },
             TransitionNode::End => {
                 break;
@@ -85,13 +96,17 @@ fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
     }
 
     match errors.len() {
-        0 => Ok(Rules { initial_state, states, transitions }),
+        0 => Ok(Rules { states, transitions }),
         _ => Err(errors)
     }
 }
 
+fn get_state_index(state_name: & String, states: & Vec<State>) -> Option<usize> {
+    states.into_iter().position(|s| &s.name == state_name)
+}
+
 fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
-                       states: &mut HashMap<String, (u8, u8, u8), RandomState>,
+                       states: &mut Vec<State>,
                        errors: &mut Vec<String>) -> (&'a TransitionNode, Vec<ConditionsConjunction>) {
     let mut processed_condition = Vec::new();
     let mut curr_condition_conjunction = Vec::new();
@@ -100,16 +115,24 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
     loop {
         let (condition, next_condition_node) = match curr_condition_node {
             ConditionNode::QuantityCondition(state_name, comp_op, quantity, next_condition_node) => {
-               if !states.contains_key(state_name) {
-                    errors.push(condition_undefined_state_error(state_name));
-                }
-                (Condition::QuantityCondition(state_name.clone(), comp_op.clone(), quantity.clone()), next_condition_node)
+                let state = match get_state_index(state_name, states) {
+                    Some(index) => index,
+                    _ => {
+                        errors.push(condition_undefined_state_error(state_name));
+                        0   // whatever is the number here, it won't be used because an error occurred
+                    }
+                };
+                (Condition::QuantityCondition(state, comp_op.clone(), quantity.clone()), next_condition_node)
             },
             ConditionNode::NeighborCondition(cell, state_name, next_condition_node) => {
-               if !states.contains_key(state_name) {
-                    errors.push(condition_undefined_state_error(state_name))
-                }
-                (Condition::NeighborCondition(cell.clone(), state_name.clone()), next_condition_node)
+                let state = match get_state_index(state_name, states) {
+                    Some(index) => index,
+                    _ => {
+                        errors.push(condition_undefined_state_error(state_name));
+                        0   // whatever is the number here, it won't be used because an error occurred
+                    }
+                };
+                (Condition::NeighborCondition(cell.clone(), state), next_condition_node)
             },
             ConditionNode::True(next_condition_node) => {
                (Condition::True, next_condition_node)

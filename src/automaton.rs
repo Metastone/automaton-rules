@@ -4,23 +4,22 @@ use rand::Rng;
 
 pub struct Automaton {
     size: (usize, usize),
-    grid: Vec<String>,
-    grid_next: Vec<String>,
+    grid: Vec<usize>,
+    grid_next: Vec<usize>,
     rules: Rules
 }
 
 impl Automaton {
     pub fn new(rules: Rules) -> Automaton {
         let size = (200, 50);
-        let initial_state = rules.initial_state.clone();
-        let mut grid = vec![initial_state; size.0 * size.1];
+        let mut grid = vec![0; size.0 * size.1];
         let mut rng = rand::thread_rng();
         for x in 0..size.0 {
             for y in 0..size.1 {
                 let r: f32 = rng.gen();
                 if r > 0.5 {
                     let index = y * size.0 + x;
-                    grid[index] = "dead".to_string();
+                    grid[index] = 1;
                 }
             }
         }
@@ -38,9 +37,9 @@ impl Automaton {
         for x in 0..self.size.0 {
             for y in 0..self.size.1 {
                 let index = self.get_index(x as isize, y as isize);
-                let state_name = self.grid[index].clone();
+                let state = self.grid[index];
                 for (state_origin, state_destination, conditions) in &self.rules.transitions {
-                    if state_origin == &state_name {
+                    if state_origin == &state {
                         let mut conditions_evaluation = false;
                         for conjunction in conditions {
                             let mut conjunction_evaluation = true;
@@ -100,7 +99,7 @@ impl Automaton {
         for x in 0..self.size.0 {
             for y in 0..self.size.1 {
                 let index = self.get_index(x as isize, y as isize);
-                self.grid[index] = self.grid_next[index].clone();
+                self.grid[index] = self.grid_next[index];
             }
         }
     }
@@ -136,7 +135,7 @@ impl Automaton {
     }
 
     pub fn get_color(&self, x: isize, y: isize) -> (u8, u8, u8) {
-        let state_name = &self.grid[self.get_index(x, y)];
-        self.rules.states.get(state_name).unwrap().clone()
+        let state = &self.grid[self.get_index(x, y)];
+        self.rules.states[*state].color
     }
 }

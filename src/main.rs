@@ -21,7 +21,6 @@ use inputs::{Inputs, UserAction};
 use termion::raw::IntoRawMode;
 
 // TODO Make traits for inputs and display in order to allow different displays.
-// TODO index states by int, not String
 // TODO find a way to represent initial state
 // TODO increase performances by avoiding having to recompute the colors in display for each cell
 
@@ -57,7 +56,7 @@ fn run(rules: Rules) {
     let mut i = 0;
     let mut pause = false;
 
-    while i < 300 {
+    while i < 1000 {
         match inputs.read_keyboard() {
             UserAction::TranslateCamera(direction) => { camera.translate(&direction); },
             UserAction::TogglePause => {
@@ -77,9 +76,9 @@ fn run(rules: Rules) {
 
         if !pause {
             let image = camera.capture(&automaton);
-            display.render(&image);
+            //display.render(&image);
             automaton.tick();
-            sleep(Duration::from_millis(10));
+            //sleep(Duration::from_millis(10));
             i += 1;
         }
     }
