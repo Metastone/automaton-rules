@@ -3,6 +3,11 @@ use crate::inputs::Direction;
 
 const TRANSLATION_OFFSET: usize = 1;
 
+pub struct Image {
+    pub grid: Vec<Vec<usize>>,
+    pub colors: Vec<(u8, u8, u8)>   // 16M color
+}
+
 /// The camera's (0,0) position is at the upper-left of the field of view.
 pub struct Camera {
     position: (isize, isize),
@@ -17,19 +22,22 @@ impl Camera {
         }
     }
 
-    pub fn capture(&self, automaton: &Automaton) -> Vec<Vec<(u8, u8, u8)>> {
-        let mut image = Vec::new();
+    pub fn capture(&self, automaton: &Automaton) -> Image {
+        let mut grid = Vec::new();
         for x_c in 0..self.size.0 {
             let mut column = Vec::new();
             for y_c in 0..self.size.1 {
                 let x = x_c as isize + self.position.0;
                 let y = y_c as isize + self.position.1;
-                column.push(automaton.get_color(x, y));
+                column.push(automaton.get_state(x, y));
             }
-            image.push(column);
+            grid.push(column);
         }
 
-        image
+        Image {
+            grid: grid,
+            colors: automaton.get_colors()
+        }
     }
 
     pub fn translate(&mut self, direction: &Direction) {

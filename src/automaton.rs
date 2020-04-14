@@ -134,8 +134,11 @@ impl Automaton {
         }
     }
 
-    pub fn get_color(&self, x: isize, y: isize) -> (u8, u8, u8) {
-        let state = &self.grid[self.get_index(x, y)];
-        self.rules.states[*state].color
+    pub fn get_state(&self, x: isize, y: isize) -> usize {
+        self.grid[self.get_index(x, y)]
+    }
+
+    pub fn get_colors(&self) -> Vec<(u8, u8, u8)> {
+        self.rules.states.iter().map(|s| s.color).collect::<Vec<_>>()
     }
 }

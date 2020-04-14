@@ -9,7 +9,7 @@ use std::collections::{
 
 pub struct State {
     pub name: String,
-    pub color: (u8, u8, u8)
+    pub color: (u8, u8, u8) // 16M color
 }
 
 pub struct Rules {

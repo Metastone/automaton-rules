@@ -22,7 +22,10 @@ use termion::raw::IntoRawMode;
 
 // TODO Make traits for inputs and display in order to allow different displays.
 // TODO find a way to represent initial state
-// TODO increase performances by avoiding having to recompute the colors in display for each cell
+// TODO avoid systematic camera's image memory reallocation
+// TODO clean up code in automaton.rs
+// TODO add grid size in language
+// TODO add random condition in language to allow non-deterministic behaviors
 
 fn main() {
     env_logger::init();
@@ -76,7 +79,7 @@ fn run(rules: Rules) {
 
         if !pause {
             let image = camera.capture(&automaton);
-            //display.render(&image);
+            display.render(&image);
             automaton.tick();
             //sleep(Duration::from_millis(10));
             i += 1;
