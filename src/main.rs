@@ -24,9 +24,10 @@ use termion::raw::IntoRawMode;
 // TODO avoid systematic camera's image memory reallocation
 // TODO clean up code in automaton.rs
 // TODO add grid size in language, & make sure quantity distribution are compatible with size
-// TODO add random condition in language to allow non-deterministic behaviors
 // TODO document language grammar
 // TODO add a save / load system to save a current state (and the associated automaton rules attached ?)
+// TODO add random condition in language to allow non-deterministic behaviors (if - else, free possibility)
+// TODO add a possibility of 'delay' in the transitions -> when parsing, create mock intermediary states.
 
 fn main() {
     env_logger::init();
@@ -60,7 +61,7 @@ fn run(rules: Rules) {
     let mut i = 0;
     let mut pause = false;
 
-    while i < 1000 {
+    loop {
         match inputs.read_keyboard() {
             UserAction::TranslateCamera(direction) => { camera.translate(&direction); },
             UserAction::TogglePause => {

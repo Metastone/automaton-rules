@@ -166,8 +166,9 @@ impl Automaton {
             (value as usize) % upper_bound
         }
         else {
+            // don't question my magic
             let signed_upper_bound = upper_bound as isize;
-            let corrected = signed_upper_bound + (value % signed_upper_bound);
+            let corrected = (signed_upper_bound + (value % signed_upper_bound)) % signed_upper_bound;
             corrected as usize
         }
     }
