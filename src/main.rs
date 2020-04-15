@@ -22,12 +22,12 @@ use termion::raw::IntoRawMode;
 
 // TODO Make traits for inputs and display in order to allow different displays.
 // TODO avoid systematic camera's image memory reallocation
-// TODO clean up code in automaton.rs
 // TODO add grid size in language, & make sure quantity distribution are compatible with size
 // TODO document language grammar
 // TODO add a save / load system to save a current state (and the associated automaton rules attached ?)
 // TODO add random condition in language to allow non-deterministic behaviors (if - else, free possibility)
 // TODO add a possibility of 'delay' in the transitions -> when parsing, create mock intermediary states.
+// TODO multi-thread automaton tick & camera capture. idea : iterators chaining to do both at once ?
 
 fn main() {
     env_logger::init();
