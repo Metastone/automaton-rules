@@ -21,11 +21,12 @@ use inputs::{Inputs, UserAction};
 use termion::raw::IntoRawMode;
 
 // TODO Make traits for inputs and display in order to allow different displays.
-// TODO find a way to represent initial state
 // TODO avoid systematic camera's image memory reallocation
 // TODO clean up code in automaton.rs
-// TODO add grid size in language
+// TODO add grid size in language, & make sure quantity distribution are compatible with size
 // TODO add random condition in language to allow non-deterministic behaviors
+// TODO document language grammar
+// TODO add a save / load system to save a current state (and the associated automaton rules attached ?)
 
 fn main() {
     env_logger::init();
@@ -81,7 +82,7 @@ fn run(rules: Rules) {
             let image = camera.capture(&automaton);
             display.render(&image);
             automaton.tick();
-            //sleep(Duration::from_millis(10));
+            sleep(Duration::from_millis(10));
             i += 1;
         }
     }

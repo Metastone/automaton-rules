@@ -1,6 +1,6 @@
 states {
-    (alive, 255, 255, 255),
     (dead, 0, 0, 0),
+    (alive, 255, 255, 255, proportion 0.2),
 }
 
 transitions {

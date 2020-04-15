@@ -4,14 +4,16 @@ use crate::camera::Image;
 
 pub struct Display {
     last_image: Vec<Vec<usize>>,
-    colors: Vec<(u8, u8, u8)> // ansi color
+    colors: Vec<(u8, u8, u8)>, // ansi color
+    redraw: bool
 }
 
 impl Display {
     pub fn new() -> Display {
         Display {
             last_image: Vec::new(),
-            colors: Vec::new()
+            colors: Vec::new(),
+            redraw: true,
         }
     }
 
@@ -27,16 +29,16 @@ impl Display {
                 .collect::<Vec<_>>();
         }
 
-        /* Note : I deliberately ignore the case where the number of lines or columns of the image is 0.
-         * It doesn't make any sense anyway (should be forbidden at configuration level). */
+        // Note : The case where the number of lines or columns of the image is 0 should be forbidden at configuration level.
 
         if (image.grid.len() != self.last_image.len()) || (image.grid[0].len() != self.last_image[0].len()) {
             self.last_image = vec![vec![0; image.grid[0].len()]; image.grid.len()];
+            self.redraw = true;
         }
 
         for x in 0..image.grid.len() {
             for y in 0..image.grid[0].len() {
-                if image.grid[x][y] != self.last_image[x][y] {
+                if self.redraw || image.grid[x][y] != self.last_image[x][y] {
                     let color_index = image.grid[x][y];
                     let (r, g, b) = self.colors[color_index];
                     print!("{}{}\u{2588}",
@@ -46,6 +48,8 @@ impl Display {
                 }
             }
         }
+
+        self.redraw = false;
         stdout().flush().unwrap();
     }
 

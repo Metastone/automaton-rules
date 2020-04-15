@@ -45,8 +45,14 @@ pub enum TransitionNode {
     End
 }
 
+pub enum StateDistributionNode {
+    Proportion(f64, Box<StateNode>),
+    Quantity(usize, Box<StateNode>),
+    Default(Box<StateNode>)
+}
+
 pub enum StateNode {
-    State(String, u8, u8, u8, Box<StateNode>),
+    State(String, u8, u8, u8, StateDistributionNode),
     Next(TransitionNode)
 }
 
@@ -80,13 +86,32 @@ fn parse_state(lexer: &mut Lexer) -> Result<StateNode, String> {
         let green = expect_u8(lexer)?;
         expect(lexer, vec![","])?;
         let blue = expect_u8(lexer)?;
-        expect(lexer, vec![")"])?;
-        expect(lexer, vec![","])?;
-        Ok(StateNode::State(state_name, red, green, blue, Box::new(parse_state(lexer)?)))
+        Ok(StateNode::State(state_name, red, green, blue, parse_state_distribution(lexer)?))
     } else {
         expect(lexer, vec!["transitions"])?;
         expect(lexer, vec!["{"])?;
         Ok(StateNode::Next(parse_transitions(lexer)?))
+    }
+}
+
+fn parse_state_distribution(lexer: &mut Lexer) -> Result<StateDistributionNode, String> {
+    let token = expect(lexer, vec![")", ","])?;
+    if token == ")" {
+        expect(lexer, vec![","])?;
+        Ok(StateDistributionNode::Default(Box::new(parse_state(lexer)?)))
+    } else {
+        let token2 = expect(lexer, vec!["proportion", "quantity"])?;
+        if token2 == "proportion" {
+            let proportion = expect_proportion(lexer)?;
+            expect(lexer, vec![")"])?;
+            expect(lexer, vec![","])?;
+            Ok(StateDistributionNode::Proportion(proportion, Box::new(parse_state(lexer)?)))
+        } else {
+            let quantity = expect_usize(lexer)?;
+            expect(lexer, vec![")"])?;
+            expect(lexer, vec![","])?;
+            Ok(StateDistributionNode::Quantity(quantity, Box::new(parse_state(lexer)?)))
+        }
     }
 }
 
@@ -110,7 +135,7 @@ fn parse_condition(lexer: &mut Lexer) -> Result<ConditionNode, String> {
         Ok(ConditionNode::True(parse_next_condition(lexer)?))
     }
     else if let Some(neighbor_cell) = to_neighbor_cell(&token) {
-        expect_is(lexer)?;
+        expect(lexer, vec!["is"])?;
         let state_name = expect_identifier(lexer)?;
         Ok(ConditionNode::NeighborCondition(neighbor_cell, state_name, parse_next_condition(lexer)?))
     }
@@ -193,12 +218,23 @@ fn expect_neighbor_number(lexer: &mut Lexer) -> Result<u8, String> {
     Err(format!("Expected an integer between 0 and 8, found {}.", token))
 }
 
-/// Return success if the next token is 'is', or raises an error.
-fn expect_is(lexer: &mut Lexer) -> Result<(), String> {
+/// Return the next token translated into a floating number between 0 and 1 if possible, or raises an error.
+fn expect_proportion(lexer: &mut Lexer) -> Result<f64, String> {
     let token = lexer.get_next_token()?;
-    match token.str.as_str() {
-        "is" => Ok(()),
-        _ => Err(format!("Expected \"is\" token, found {}.", token))
+    if let Ok(number) = token.str.parse::<f64>() {
+        if number >= 0.0 && number <= 1.0 {
+            return Ok(number)
+        }
+    }
+    Err(format!("Expected a floating number between 0 and 1, found {}.", token))
+}
+
+/// Return the next token translated into an unsigned integer if possible, or raises an error.
+fn expect_usize(lexer: &mut Lexer) -> Result<usize, String> {
+    let token = lexer.get_next_token()?;
+    match token.str.parse::<usize>() {
+        Ok(number) => Ok(number),
+        Err(_) => Err(format!("Expected an unsigned integer, found {}.", token))
     }
 }
 
@@ -251,7 +287,9 @@ mod tests {
     static EXPECT_ID_FILE: &str = "resources/tests/parser_expected_identifier.txt";
     static EXPECT_IS_FILE: &str = "resources/tests/parser_expected_is_token.txt";
     static EXPECT_NEIGHBOR_NB_FILE: &str = "resources/tests/parser_expected_neighbor_number.txt";
+    static EXPECT_PROPORTION_FILE: &str = "resources/tests/parser_expected_proportion.txt";
     static EXPECT_U8_FILE: &str = "resources/tests/parser_expected_u8.txt";
+    static EXPECT_USIZE_FILE: &str = "resources/tests/parser_expected_usize.txt";
     static NEXT_COND_ERROR_FILE: &str = "resources/tests/parser_next_condition_error.txt";
     static NO_STATES_FILE: &str = "resources/tests/parser_no_states_keyword.txt";
 
@@ -302,7 +340,7 @@ mod tests {
     #[test]
     fn parse_expect_is_token_fails() {
          match parse(EXPECT_IS_FILE) {
-            Err(error) => assert_eq!(error, "Expected \"is\" token, found \"plouf\" - line 8, column 39."),
+            Err(error) => assert_eq!(error, "Expected \"is\", found \"plouf\" - line 8, column 39."),
             _ => assert!(false)
         }
     }
@@ -316,9 +354,25 @@ mod tests {
     }
 
     #[test]
+    fn parse_expect_proportion_fails() {
+        match parse(EXPECT_PROPORTION_FILE) {
+            Err(error) => assert_eq!(error, "Expected a floating number between 0 and 1, found \"2.5\" - line 2, column 41."),
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
     fn parse_expect_u8_fails() {
          match parse(EXPECT_U8_FILE) {
             Err(error) => assert_eq!(error, "Expected an integer between 0 and 255, found \"260\" - line 2, column 15."),
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_expect_usize_fails() {
+        match parse(EXPECT_USIZE_FILE) {
+            Err(error) => assert_eq!(error, "Expected an unsigned integer, found \"yolo\" - line 4, column 42."),
             _ => assert!(false)
         }
     }

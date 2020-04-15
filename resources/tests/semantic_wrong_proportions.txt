@@ -1,9 +1,10 @@
 states {
     (alive, 255, 255, 255, proportion 0.5),
     (dead, 0, 0, 0),
+    (unusedState, 255, 0, 0, proportion 0.6),
 }
 
 transitions {
-    (alive, dead, true && alive == 3),
+    (alive, dead, true),
     (dead, alive, alive == 3 && A is dead || E is alive),
 }

@@ -123,6 +123,7 @@ impl<'a> Lexer<'a> {
 
         let mut token = String::new();
         let mut c = first_char;
+        let mut dot_encountered = false;
 
         while !c.is_ascii_whitespace() && c != '\u{0}' {
             token.push(c);
@@ -131,6 +132,8 @@ impl<'a> Lexer<'a> {
                 if DELIMITERS.contains(&c) || OPERATOR_FIRST_CHARS.contains(&c) {
                     rewind_one_char = true;
                     break;
+                } else if c == '.' && !dot_encountered {
+                    dot_encountered = true;
                 } else {
                     failure = true;
                 }
@@ -217,7 +220,7 @@ mod tests {
     static BENCH_UGLY_FILE: &str = "resources/tests/lexer_benchmark_ugly.txt";
     static NON_EXISTING_FILE: &str = "resources/tests/does_not_exist.txt";
     static OPERATOR_TYPO_FILE: &str = "resources/tests/lexer_operator_typo.txt";
-    static NB_WITH_ILLEGAL_CHAR_FILE: &str = "resources/tests/lexer_number_with_illegal_char.txt";
+    static NB_WITH_TWO_DOTS_FILE: &str = "resources/tests/lexer_number_with_two_dots.txt";
     static NB_WITH_ALPHABETIC_FILE: &str = "resources/tests/lexer_number_with_alphabetic.txt";
     static ID_WITH_ILLEGAL_CHAR_FILE: &str = "resources/tests/lexer_id_with_illegal_char.txt";
 
@@ -253,6 +256,7 @@ mod tests {
         assert_eq!(lexer.get_next_token().unwrap().str, ")");
         assert_eq!(lexer.get_next_token().unwrap().str, "{");
         assert_eq!(lexer.get_next_token().unwrap().str, "}");
+        assert_eq!(lexer.get_next_token().unwrap().str, "3.14");
         assert_eq!(lexer.get_next_token().unwrap().str, "test");
         assert!(lexer.get_next_token().unwrap().str.is_empty());
         assert!(lexer.get_next_token().unwrap().str.is_empty());
@@ -278,10 +282,10 @@ mod tests {
     }
 
     #[test]
-    fn tokenize_number_with_illegal_char_fails() {
-        let mut lexer = Lexer::new(NB_WITH_ILLEGAL_CHAR_FILE).unwrap();
+    fn tokenize_number_with_two_dots_fails() {
+        let mut lexer = Lexer::new(NB_WITH_TWO_DOTS_FILE).unwrap();
         match lexer.get_next_token() {
-            Err(error) => assert_eq!(error, "Invalid token \"3.14\" - line 1, column 4. It starts with a digit but is not a number."),
+            Err(error) => assert_eq!(error, "Invalid token \"1.000.000\" - line 1, column 9. It starts with a digit but is not a number."),
             _ => assert!(false),
         }
         assert_eq!(lexer.get_next_token().unwrap().str, "thisTokenShouldBeReadWithoutIssues");

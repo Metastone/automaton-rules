@@ -35,7 +35,7 @@ impl Camera {
         }
 
         Image {
-            grid: grid,
+            grid,
             colors: automaton.get_colors()
         }
     }

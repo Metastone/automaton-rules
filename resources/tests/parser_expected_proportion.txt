@@ -1,5 +1,5 @@
 states {
-    (alive, 255, 255, 255, proportion 0.5),
+    (alive, 255, 255, 255, proportion 2.5),
     (dead, 0, 0, 0),
     (unusedState, 255, 0, 0, quantity 0),
 }

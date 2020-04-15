@@ -1,4 +1,4 @@
-use crate::compiler::semantic::{Rules, Condition};
+use crate::compiler::semantic::{Rules, Condition, StateDistribution};
 use crate::compiler::parser::{NeighborCell, ComparisonOperator};
 use rand::Rng;
 
@@ -12,17 +12,55 @@ pub struct Automaton {
 impl Automaton {
     pub fn new(rules: Rules) -> Automaton {
         let size = (200, 50);
-        let mut grid = vec![0; size.0 * size.1];
         let mut rng = rand::thread_rng();
+        let states = &rules.states;
+
+        // Initialize grid with default state.
+        let default_state = (&rules).states.iter()
+            .find(|s| match s.distribution {
+                StateDistribution::Default => true,
+                _ => false
+            })
+            .unwrap().id;
+        let mut grid = vec![default_state; size.0 * size.1];
+
+        // Add the states that have a proportion distribution.
         for x in 0..size.0 {
             for y in 0..size.1 {
-                let r: f32 = rng.gen();
-                if r > 0.5 {
-                    let index = y * size.0 + x;
-                    grid[index] = 1;
+                let index = y * size.0 + x;
+                let r_p: f64 = rng.gen();
+                let mut lower_bound = 0.0;
+                let mut upper_bound = 0.0;
+
+                for i in 0..states.len() {
+                    if let StateDistribution::Proportion(p) = states[i].distribution {
+                        upper_bound += p;
+                        if r_p >= lower_bound && r_p < upper_bound {
+                            grid[index] = i;
+                        }
+                        lower_bound = upper_bound;
+                    }
                 }
             }
         }
+
+        // Add the states that have a quantity distribution. They can overwrite states without a quantity distribution.
+        let mut positions_used = Vec::new();
+        for i in 0..states.len() {
+            if let StateDistribution::Quantity(q) = states[i].distribution {
+                let mut c = 0;
+                while c < q {
+                    let pos = (rng.gen_range(0, size.0), rng.gen_range(0, size.1));
+                    if !positions_used.contains(&pos) {
+                        let index = pos.1 * size.0 + pos.0;
+                        grid[index] = i;
+                        positions_used.push(pos);
+                        c += 1;
+                    }
+                }
+            }
+        }
+
         let grid_next = grid.clone();
 
         Automaton {

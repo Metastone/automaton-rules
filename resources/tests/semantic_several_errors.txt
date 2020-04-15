@@ -1,4 +1,5 @@
 states {
+    (yolo, 100, 100, 100),
 }
 
 transitions {
