@@ -1,11 +1,11 @@
 use crate::compiler::semantic::{State, Rules, Condition, StateDistribution, ConditionsConjunction};
 use crate::compiler::parser::{NeighborCell, ComparisonOperator};
-use rand::Rng;
+use rand::{Rng, rngs::ThreadRng};
 
 pub struct Automaton {
     grid: Vec<usize>,
     grid_next: Vec<usize>,
-    rules: Rules
+    rules: Rules,
 }
 
 impl Automaton {
@@ -33,7 +33,7 @@ impl Automaton {
         Automaton {
             grid,
             grid_next,
-            rules
+            rules,
         }
     }
 
@@ -78,15 +78,16 @@ impl Automaton {
         }
     }
 
-    pub fn tick(&mut self) {
+    pub fn tick(&mut self, rng: &mut ThreadRng) {
         for x in 0..self.rules.world_size.0 {
             for y in 0..self.rules.world_size.1 {
                 let index = self.get_index(x as isize, y as isize);
                 let state = self.grid[index];
                 for (state_origin, state_destination, conditions) in &self.rules.transitions {
                     if state_origin == &state {
-                        if self.evaluate_conditions(x, y, conditions) {
+                        if self.evaluate_conditions(x, y, conditions, rng) {
                             self.grid_next[index] = state_destination.clone();
+                            break;
                         }
                     }
                 }
@@ -101,21 +102,21 @@ impl Automaton {
         }
     }
 
-    fn evaluate_conditions(& self, x: usize, y: usize, conditions: &Vec<ConditionsConjunction>) -> bool {
-        match conditions.iter().find(|conjunction| self.evaluate_conjunction(x, y, conjunction)) {
+    fn evaluate_conditions(& self, x: usize, y: usize, conditions: &Vec<ConditionsConjunction>, rng: &mut ThreadRng) -> bool {
+        match conditions.iter().find(|conjunction| self.evaluate_conjunction(x, y, conjunction, rng)) {
             Some(_) => true,
             _ => false
         }
     }
 
-    fn evaluate_conjunction(& self, x: usize, y: usize, conjunction: &ConditionsConjunction) -> bool {
-        match conjunction.iter().find(|condition| !self.evaluate_condition(x, y, condition)) {
+    fn evaluate_conjunction(& self, x: usize, y: usize, conjunction: &ConditionsConjunction, rng: &mut ThreadRng) -> bool {
+        match conjunction.iter().find(|condition| !self.evaluate_condition(x, y, condition, rng)) {
             Some(_) => false,
             _ => true
         }
     }
 
-    fn evaluate_condition(& self, x: usize, y: usize, condition: &Condition) -> bool {
+    fn evaluate_condition(& self, x: usize, y: usize, condition: &Condition, rng: &mut ThreadRng) -> bool {
         match condition {
             Condition::QuantityCondition(state, comp, quantity) => {
                 let count = self.count_state_in_neighborhood(x, y, state);
@@ -124,6 +125,10 @@ impl Automaton {
             Condition::NeighborCondition(neighbor, state) => {
                 let index = self.get_index_of_neighbor(x as isize, y as isize, neighbor);
                 &self.grid[index] == state
+            },
+            Condition::RandomCondition(proportion) => {
+                let r: f64 = rng.gen();
+                r < *proportion
             },
             Condition::True => true
         }

@@ -37,6 +37,7 @@ pub enum NextConditionNode {
 pub enum ConditionNode {
     QuantityCondition(String, ComparisonOperator, u8, NextConditionNode),
     NeighborCondition(NeighborCell, String, NextConditionNode),
+    RandomCondition(f64, NextConditionNode),
     True(NextConditionNode)
 }
 
@@ -147,6 +148,10 @@ fn parse_condition(lexer: &mut Lexer) -> Result<ConditionNode, String> {
     if token.str == "true" {
         Ok(ConditionNode::True(parse_next_condition(lexer)?))
     }
+    else if token.str == "rand" {
+        let proportion = expect_proportion(lexer)?;
+        Ok(ConditionNode::RandomCondition(proportion, parse_next_condition(lexer)?))
+    }
     else if let Some(neighbor_cell) = to_neighbor_cell(&token) {
         expect(lexer, vec!["is"])?;
         let state_name = expect_identifier(lexer)?;
@@ -158,7 +163,7 @@ fn parse_condition(lexer: &mut Lexer) -> Result<ConditionNode, String> {
         Ok(ConditionNode::QuantityCondition(token.str, comparison_operator, number, parse_next_condition(lexer)?))
     }
     else {
-        Err(format!("Expected either token \"true\", a neighbor cell identifier \
+        Err(format!("Expected either token \"true\", token \"rand\", a neighbor cell identifier \
             (one of \"A\", \"B\", \"C\", \"D\", \"E\", \"F\", \"H\"), or an alphanumeric identifier, but found {}.", token))
     }
 }
@@ -328,8 +333,8 @@ mod tests {
     #[test]
     fn parse_condition_error_fails() {
         match parse(COND_ERROR_FILE) {
-            Err(error) => assert_eq!(error, "Expected either token \"true\", a neighbor cell identifier (one of \"A\", \"B\", \"C\", \"D\", \"E\", \"F\", \"H\"), \
-            or an alphanumeric identifier, but found \"3153\" - line 9, column 22."),
+            Err(error) => assert_eq!(error, "Expected either token \"true\", token \"rand\", a neighbor cell identifier \
+            (one of \"A\", \"B\", \"C\", \"D\", \"E\", \"F\", \"H\"), or an alphanumeric identifier, but found \"3153\" - line 9, column 22."),
             _ => assert!(false)
         }
     }

@@ -29,6 +29,7 @@ pub type ConditionsConjunction = Vec<Condition>;
 pub enum Condition {
     QuantityCondition(usize, ComparisonOperator, u8),
     NeighborCondition(NeighborCell, usize),
+    RandomCondition(f64),
     True
 }
 
@@ -189,6 +190,9 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
                     }
                 };
                 (Condition::NeighborCondition(cell.clone(), state), next_condition_node)
+            },
+            ConditionNode::RandomCondition(proportion, next_condition_node) => {
+                (Condition::RandomCondition(proportion.clone()), next_condition_node)
             },
             ConditionNode::True(next_condition_node) => {
                (Condition::True, next_condition_node)

@@ -8,5 +8,5 @@ states {
 
 transitions {
     (alive, dead, true),
-    (dead, alive, alive == 3 && A is dead || E is alive),
+    (dead, alive, alive == 3 && A is dead || E is alive && rand 0.3),
 }

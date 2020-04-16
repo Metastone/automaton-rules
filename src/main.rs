@@ -24,14 +24,15 @@ use termion::raw::IntoRawMode;
 // TODO avoid systematic camera's image memory reallocation
 // TODO document language grammar
 // TODO add a save / load system to save a current state (and the associated automaton rules attached ?)
-// TODO add random condition in language to allow non-deterministic behaviors (if - else, free possibility)
 // TODO add a possibility of 'delay' in the transitions -> when parsing, create mock intermediary states.
 // TODO multi-thread automaton tick & camera capture. idea : iterators chaining to do both at once ?
+// TODO make file to run a program argument
+// TODO add basic arithmetic (addition, subtraction) in language for conditions
 
 fn main() {
     env_logger::init();
 
-    let file_name = "/home/metastone/Documents/projects/mutations/resources/game_of_life.txt";
+    let file_name = "/home/metastone/Documents/projects/mutations/resources/virus.txt";
     match parse(file_name) {
         Ok(rules) => {
             info!("Cellular automaton rules where parsed successfully from file {}.", file_name);
@@ -51,6 +52,7 @@ fn run(rules: Rules) {
     let mut camera = Camera::new(0, 0);
     let mut display = Display::new();
     let mut inputs = Inputs::new();
+    let mut rng = rand::thread_rng();
 
     let _stdout = io::stdout().into_raw_mode().unwrap();
     display.init();
@@ -81,7 +83,7 @@ fn run(rules: Rules) {
         if !pause {
             let image = camera.capture(&automaton);
             display.render(&image);
-            automaton.tick();
+            automaton.tick(&mut rng);
             sleep(Duration::from_millis(10));
             i += 1;
         }
