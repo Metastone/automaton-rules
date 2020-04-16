@@ -17,6 +17,7 @@ pub struct State {
 }
 
 pub struct Rules {
+    pub world_size: (usize, usize),
     pub states: Vec<State>,
     pub transitions: Vec<Transition>
 }
@@ -45,21 +46,21 @@ pub fn parse(file_name: &str) -> Result<Rules, Vec<String>> {
 fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
     let mut errors = Vec::new();
 
-    if let StateNode::Next(_) = ast {
+    if let StateNode::Next(_) = ast.first_state {
         errors.push("You should specify at least one state.".to_string());
     }
 
-    let (states, first_transition_node) = construct_states(ast);
-    control_states_distribution(&states, &mut errors);
+    let (states, first_transition_node) = construct_states(&ast.first_state);
+    control_states_distribution(&states, &ast.world_size, &mut errors);
     let transitions = construct_transitions(first_transition_node, &states, &mut errors);
 
     match errors.len() {
-        0 => Ok(Rules { states, transitions }),
+        0 => Ok(Rules { world_size: ast.world_size, states, transitions }),
         _ => Err(errors)
     }
 }
 
-fn construct_states<'a>(ast: &'a Ast) -> (Vec<State>, &'a TransitionNode) {
+fn construct_states(ast: & StateNode) -> (Vec<State>, & TransitionNode) {
     let mut curr_state_node = ast;
     let first_transition_node: &TransitionNode;
     let mut states = Vec::new();
@@ -90,7 +91,7 @@ fn construct_states<'a>(ast: &'a Ast) -> (Vec<State>, &'a TransitionNode) {
     (states, first_transition_node)
 }
 
-fn control_states_distribution(states: &Vec<State>, errors: &mut Vec<String>) {
+fn control_states_distribution(states: &Vec<State>, world_size: &(usize, usize), errors: &mut Vec<String>) {
     let proportions_sum = states.iter().fold(0.0, |sum, s|
         sum + match s.distribution {
             StateDistribution::Proportion(p) => p,
@@ -109,6 +110,18 @@ fn control_states_distribution(states: &Vec<State>, errors: &mut Vec<String>) {
         errors.push(format!(
             "There must be exactly one default state (without a distribution specified), but there are currently {} of such states.",
             default_count));
+    }
+
+    let quantities_sum = states.iter().fold(0, |sum, s|
+        sum + match s.distribution {
+            StateDistribution::Quantity(q) => q,
+            _ => 0
+        });
+    let q_max= world_size.0 * world_size.1;
+    if quantities_sum > q_max {
+        errors.push(format!(
+            "The sum of state's quantities is {}, but the world cannot hold that, its size is only {} * {} = {}.",
+            quantities_sum, world_size.0, world_size.1, q_max));
     }
 }
 
@@ -232,6 +245,7 @@ mod tests {
     static BENCHMARK_FILE: &str = "resources/tests/compiler_benchmark.txt";
     static CONDITION_UNDEFINED_STATE_FILE: &str = "resources/tests/semantic_condition_undefined_state.txt";
     static NO_STATES_FILE: &str = "resources/tests/semantic_no_states.txt";
+    static QUANTITIES_TOO_MUCH_FILE: &str = "resources/tests/semantic_quantities_too_much.txt";
     static SEVERAL_ERRORS_FILE: &str = "resources/tests/semantic_several_errors.txt";
     static TRANSITION_UNDEFINED_STATE_FILE: &str = "resources/tests/semantic_transition_undefined_state.txt";
     static TRUE_ERROR_FILE: &str = "resources/tests/semantic_true_error.txt";
@@ -264,6 +278,17 @@ mod tests {
                 assert_eq!(errors.len(), 2);
                 assert_eq!(errors[0], "You should specify at least one state.");
                 assert_eq!(errors[1], "There must be exactly one default state (without a distribution specified), but there are currently 0 of such states.");
+            },
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_quantities_too_much_fails() {
+        match parse(QUANTITIES_TOO_MUCH_FILE) {
+            Err(errors) => {
+                assert_eq!(errors.len(), 1);
+                assert_eq!(errors[0], "The sum of state's quantities is 55, but the world cannot hold that, its size is only 10 * 5 = 50.");
             },
             _ => assert!(false)
         }
@@ -331,5 +356,4 @@ mod tests {
             _ => assert!(false)
         }
     }
-
 }

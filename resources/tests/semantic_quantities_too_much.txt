@@ -1,9 +1,10 @@
-size (200, 50)
+size (10, 5)
 
 states {
     (alive, 255, 255, 255, proportion 0.5),
     (dead, 0, 0, 0),
-    (unusedState, 255, 0, 0, proportion 0.6),
+    (unusedState1, 255, 0, 0, quantity 30),
+    (unusedState2, 0, 255, 0, quantity 25),
 }
 
 transitions {

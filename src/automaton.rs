@@ -3,7 +3,6 @@ use crate::compiler::parser::{NeighborCell, ComparisonOperator};
 use rand::Rng;
 
 pub struct Automaton {
-    size: (usize, usize),
     grid: Vec<usize>,
     grid_next: Vec<usize>,
     rules: Rules
@@ -11,7 +10,7 @@ pub struct Automaton {
 
 impl Automaton {
     pub fn new(rules: Rules) -> Automaton {
-        let size = (200, 50);
+        let size = &rules.world_size;
         let states = &rules.states;
 
         // Initialize grid with default state.
@@ -32,7 +31,6 @@ impl Automaton {
         let grid_next = grid.clone();
 
         Automaton {
-            size,
             grid,
             grid_next,
             rules
@@ -81,8 +79,8 @@ impl Automaton {
     }
 
     pub fn tick(&mut self) {
-        for x in 0..self.size.0 {
-            for y in 0..self.size.1 {
+        for x in 0..self.rules.world_size.0 {
+            for y in 0..self.rules.world_size.1 {
                 let index = self.get_index(x as isize, y as isize);
                 let state = self.grid[index];
                 for (state_origin, state_destination, conditions) in &self.rules.transitions {
@@ -95,8 +93,8 @@ impl Automaton {
             }
         }
 
-        for x in 0..self.size.0 {
-            for y in 0..self.size.1 {
+        for x in 0..self.rules.world_size.0 {
+            for y in 0..self.rules.world_size.1 {
                 let index = self.get_index(x as isize, y as isize);
                 self.grid[index] = self.grid_next[index];
             }
@@ -172,7 +170,7 @@ impl Automaton {
     }
 
     fn get_index(&self, x: isize, y: isize) -> usize {
-        Self::tore_correction(y, self.size.1) * self.size.0 + Self::tore_correction(x, self.size.0)
+        Self::tore_correction(y, self.rules.world_size.1) * self.rules.world_size.0 + Self::tore_correction(x, self.rules.world_size.0)
     }
 
     /// The world is a tore, so the value range can be )-inf; +inf(, and it will be mapped to (0; upper_bound-1).

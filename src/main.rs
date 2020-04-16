@@ -22,7 +22,6 @@ use termion::raw::IntoRawMode;
 
 // TODO Make traits for inputs and display in order to allow different displays.
 // TODO avoid systematic camera's image memory reallocation
-// TODO add grid size in language, & make sure quantity distribution are compatible with size
 // TODO document language grammar
 // TODO add a save / load system to save a current state (and the associated automaton rules attached ?)
 // TODO add random condition in language to allow non-deterministic behaviors (if - else, free possibility)

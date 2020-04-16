@@ -56,7 +56,10 @@ pub enum StateNode {
     Next(TransitionNode)
 }
 
-pub type Ast = StateNode;
+pub struct Ast {
+    pub world_size: (usize, usize),
+    pub first_state: StateNode
+}
 
 /// Parses the file to create an AST that matches the automaton description language grammar.
 /// If an error occurs, the parsing is stopped and the error is returned.
@@ -71,9 +74,19 @@ pub fn parse(file_name: &str) -> Result<Ast, String> {
         Err(io_error) => { return Err(format!("Cannot parse file {}. Cause : {:?}", file_name, io_error)); }
     };
 
+    expect(&mut lexer, vec!["size"])?;
+    expect(&mut lexer, vec!["("])?;
+    let width = expect_usize(&mut lexer)?;
+    expect(&mut lexer, vec![","])?;
+    let height = expect_usize(&mut lexer)?;
+    expect(&mut lexer, vec![")"])?;
     expect(&mut lexer, vec!["states"])?;
     expect(&mut lexer, vec!["{"])?;
-    parse_state(&mut lexer)
+    let first_state = parse_state(&mut lexer)?;
+    Ok(Ast {
+        world_size: (width, height),
+        first_state
+    })
 }
 
 fn parse_state(lexer: &mut Lexer) -> Result<StateNode, String> {
@@ -316,7 +329,7 @@ mod tests {
     fn parse_condition_error_fails() {
         match parse(COND_ERROR_FILE) {
             Err(error) => assert_eq!(error, "Expected either token \"true\", a neighbor cell identifier (one of \"A\", \"B\", \"C\", \"D\", \"E\", \"F\", \"H\"), \
-            or an alphanumeric identifier, but found \"3153\" - line 7, column 22."),
+            or an alphanumeric identifier, but found \"3153\" - line 9, column 22."),
             _ => assert!(false)
         }
     }
@@ -324,7 +337,7 @@ mod tests {
     #[test]
     fn parse_expect_comp_operator_fails() {
         match parse(EXPECT_COMP_OP_FILE) {
-            Err(error) => assert_eq!(error, "Expected one of \"<\", \">\", \"<=\", \">=\", \"==\", or \"!=\" tokens, found \"plouf\" - line 7, column 29."),
+            Err(error) => assert_eq!(error, "Expected one of \"<\", \">\", \"<=\", \">=\", \"==\", or \"!=\" tokens, found \"plouf\" - line 9, column 29."),
             _ => assert!(false)
         }
     }
@@ -332,7 +345,7 @@ mod tests {
     #[test]
     fn parse_expect_identifier_fails() {
          match parse(EXPECT_ID_FILE) {
-            Err(error) => assert_eq!(error, "Expected an alphanumeric identifier, found \"51566\" - line 3, column 10."),
+            Err(error) => assert_eq!(error, "Expected an alphanumeric identifier, found \"51566\" - line 5, column 10."),
             _ => assert!(false)
         }
     }
@@ -340,7 +353,7 @@ mod tests {
     #[test]
     fn parse_expect_is_token_fails() {
          match parse(EXPECT_IS_FILE) {
-            Err(error) => assert_eq!(error, "Expected \"is\", found \"plouf\" - line 8, column 39."),
+            Err(error) => assert_eq!(error, "Expected \"is\", found \"plouf\" - line 10, column 39."),
             _ => assert!(false)
         }
     }
@@ -348,7 +361,7 @@ mod tests {
     #[test]
     fn parse_expect_neighbor_number_fails() {
          match parse(EXPECT_NEIGHBOR_NB_FILE) {
-            Err(error) => assert_eq!(error, "Expected an integer between 0 and 8, found \"22\" - line 7, column 28."),
+            Err(error) => assert_eq!(error, "Expected an integer between 0 and 8, found \"22\" - line 9, column 28."),
             _ => assert!(false)
         }
     }
@@ -356,7 +369,7 @@ mod tests {
     #[test]
     fn parse_expect_proportion_fails() {
         match parse(EXPECT_PROPORTION_FILE) {
-            Err(error) => assert_eq!(error, "Expected a floating number between 0 and 1, found \"2.5\" - line 2, column 41."),
+            Err(error) => assert_eq!(error, "Expected a floating number between 0 and 1, found \"2.5\" - line 4, column 41."),
             _ => assert!(false)
         }
     }
@@ -364,7 +377,7 @@ mod tests {
     #[test]
     fn parse_expect_u8_fails() {
          match parse(EXPECT_U8_FILE) {
-            Err(error) => assert_eq!(error, "Expected an integer between 0 and 255, found \"260\" - line 2, column 15."),
+            Err(error) => assert_eq!(error, "Expected an integer between 0 and 255, found \"260\" - line 4, column 15."),
             _ => assert!(false)
         }
     }
@@ -372,7 +385,7 @@ mod tests {
     #[test]
     fn parse_expect_usize_fails() {
         match parse(EXPECT_USIZE_FILE) {
-            Err(error) => assert_eq!(error, "Expected an unsigned integer, found \"yolo\" - line 4, column 42."),
+            Err(error) => assert_eq!(error, "Expected an unsigned integer, found \"yolo\" - line 6, column 42."),
             _ => assert!(false)
         }
     }
@@ -380,7 +393,7 @@ mod tests {
     #[test]
     fn parse_next_condition_error_fails() {
          match parse(NEXT_COND_ERROR_FILE) {
-            Err(error) => assert_eq!(error, "Expected either a boolean operator \"&&\", \"||\" or a \")\" token, found \"dead\" - line 8, column 46."),
+            Err(error) => assert_eq!(error, "Expected either a boolean operator \"&&\", \"||\" or a \")\" token, found \"dead\" - line 10, column 46."),
             _ => assert!(false)
         }
     }
@@ -388,7 +401,7 @@ mod tests {
     #[test]
     fn parse_no_states_keyword_fails() {
          match parse(NO_STATES_FILE) {
-            Err(error) => assert_eq!(error, "Expected \"states\", found \"plouf\" - line 1, column 5."),
+            Err(error) => assert_eq!(error, "Expected \"states\", found \"plouf\" - line 3, column 5."),
             _ => assert!(false)
         }
     }
