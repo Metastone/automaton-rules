@@ -124,7 +124,7 @@ impl Automaton {
             },
             Condition::NeighborCondition(neighbor, state) => {
                 let index = self.get_index_of_neighbor(x as isize, y as isize, neighbor);
-                &self.grid[index] == state
+                self.is_state(self.grid[index], *state)
             },
             Condition::RandomCondition(proportion) => {
                 let r: f64 = rng.gen();
@@ -140,13 +140,23 @@ impl Automaton {
             for v in -1..2 {
                 if u != 0 || v != 0 {
                     let index =  self.get_index(x as isize + u, y as isize + v);
-                    if &self.grid[index] == state {
+                    if self.is_state(self.grid[index], *state) {
                         count += 1;
                     }
                 }
             }
         }
         count
+    }
+
+    fn is_state(& self, state: usize, other_state: usize) -> bool {
+        if state == other_state {
+            return true;
+        }
+        if let Some(range) = &self.rules.implicit_state_ranges[other_state] {
+            return state >= range.start && state < range.len;
+        }
+        false
     }
 
     fn evaluate_quantity_condition(count: &u8, comp: &ComparisonOperator, quantity: &u8) -> bool {

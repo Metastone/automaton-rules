@@ -2,21 +2,13 @@ size (200, 50)
 
 states {
     (alive, 255, 255, 255),
-    (infected1, 255, 0, 0, quantity 1),
-    (infected2, 255, 0, 0, quantity 0),
-    (infected3, 255, 0, 0, quantity 0),
-    (infected4, 255, 0, 0, quantity 0),
-    (infected5, 255, 0, 0, quantity 0),
+    (infected, 255, 0, 0, quantity 1),
     (resistant, 0, 255, 0, proportion 0.6),
     (dead, 0, 0, 0, quantity 0),
 }
 
 transitions {
-    (alive, infected1, infected1 >= 1 || infected2 > 1 || infected3 > 1 || infected4 > 1 || infected5 > 1),
-    (infected1, infected2, true),
-    (infected2, infected3, true),
-    (infected3, infected4, true),
-    (infected4, infected5, true),
-    (infected5, dead, rand 0.5),
-    (infected5, resistant, true),
+    (alive, infected, infected >= 1),
+    (infected, dead, rand 0.5, delay 5),
+    (infected, resistant, true, delay 3),
 }

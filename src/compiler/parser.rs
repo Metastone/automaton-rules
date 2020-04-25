@@ -2,7 +2,7 @@
 
 use crate::compiler::lexer::{Token, Lexer};
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum ComparisonOperator {
     Greater,
     Lesser,
@@ -12,7 +12,7 @@ pub enum ComparisonOperator {
     Different
 }
 
-#[derive(Clone)]
+#[derive(Clone, Debug)]
 pub enum NeighborCell {
     A,
     B,
@@ -31,7 +31,7 @@ pub enum BooleanOperator {
 
 pub enum NextConditionNode {
     NextCondition(BooleanOperator, Box<ConditionNode>),
-    NextTransition(Box<TransitionNode>)
+    NextTransition(Option<usize>, Box<TransitionNode>)  // The optional usize represents the optional transition's delay
 }
 
 pub enum ConditionNode {
@@ -173,12 +173,19 @@ fn parse_next_condition(lexer: &mut Lexer) -> Result<NextConditionNode, String> 
     if let Some(boolean_operator) = to_boolean_operator(&token) {
         Ok(NextConditionNode::NextCondition(boolean_operator, Box::new(parse_condition(lexer)?)))
     }
+    else if token.str == "," {
+        expect(lexer, vec!["delay"])?;
+        let delay = expect_delay(lexer)?;
+        expect(lexer, vec![")"]);
+        expect(lexer, vec![","]);
+        Ok(NextConditionNode::NextTransition(Some(delay), Box::new(parse_transitions(lexer)?)))
+    }
     else if token.str == ")" {
         expect(lexer, vec![","])?;
-        Ok(NextConditionNode::NextTransition(Box::new(parse_transitions(lexer)?)))
+        Ok(NextConditionNode::NextTransition(None, Box::new(parse_transitions(lexer)?)))
     }
     else {
-        Err(format!("Expected either a boolean operator \"&&\", \"||\" or a \")\" token, found {}.", token))
+        Err(format!("Expected either a boolean operator, a \",\" or a \")\" token, found {}.", token))
     }
 }
 
@@ -256,6 +263,17 @@ fn expect_usize(lexer: &mut Lexer) -> Result<usize, String> {
     }
 }
 
+/// Return the next token translated into a integer > 1 if possible, or raises an error.
+fn expect_delay(lexer: &mut Lexer) -> Result<usize, String> {
+    let token = lexer.get_next_token()?;
+    if let Ok(number) = token.str.parse::<usize>() {
+        if number > 1 {
+            return Ok(number);
+        }
+    }
+    Err(format!("Expected an integer greater than 1, found {}.", token))
+}
+
 /// Return a comparison operator if the next token represents one, or raises an error.
 fn expect_comparison_operator(lexer: &mut Lexer) -> Result<ComparisonOperator, String> {
     let token = lexer.get_next_token()?;
@@ -302,6 +320,7 @@ mod tests {
     static NON_EXISTING_FILE: &str = "resources/tests/does_not_exist.txt";
     static COND_ERROR_FILE: &str = "resources/tests/parser_condition_error.txt";
     static EXPECT_COMP_OP_FILE: &str = "resources/tests/parser_expected_comparison_operator.txt";
+    static EXPECT_DELAY_FILE: &str = "resources/tests/parser_expected_delay.txt";
     static EXPECT_ID_FILE: &str = "resources/tests/parser_expected_identifier.txt";
     static EXPECT_IS_FILE: &str = "resources/tests/parser_expected_is_token.txt";
     static EXPECT_NEIGHBOR_NB_FILE: &str = "resources/tests/parser_expected_neighbor_number.txt";
@@ -343,6 +362,14 @@ mod tests {
     fn parse_expect_comp_operator_fails() {
         match parse(EXPECT_COMP_OP_FILE) {
             Err(error) => assert_eq!(error, "Expected one of \"<\", \">\", \"<=\", \">=\", \"==\", or \"!=\" tokens, found \"plouf\" - line 9, column 29."),
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_expect_delay_fails() {
+        match parse(EXPECT_DELAY_FILE) {
+            Err(error) => assert_eq!(error, "Expected an integer greater than 1, found \"1\" - line 11, column 64."),
             _ => assert!(false)
         }
     }
@@ -398,7 +425,7 @@ mod tests {
     #[test]
     fn parse_next_condition_error_fails() {
          match parse(NEXT_COND_ERROR_FILE) {
-            Err(error) => assert_eq!(error, "Expected either a boolean operator \"&&\", \"||\" or a \")\" token, found \"dead\" - line 10, column 46."),
+            Err(error) => assert_eq!(error, "Expected either a boolean operator, a \",\" or a \")\" token, found \"dead\" - line 10, column 46."),
             _ => assert!(false)
         }
     }

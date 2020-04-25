@@ -3,12 +3,14 @@
 use crate::compiler::parser;
 use crate::compiler::parser::*;
 
+#[derive(Debug)]
 pub enum StateDistribution {
     Proportion(f64),
     Quantity(usize),
     Default
 }
 
+#[derive(Debug)]
 pub struct State {
     pub id: usize,
     pub name: String,
@@ -16,16 +18,25 @@ pub struct State {
     pub distribution: StateDistribution
 }
 
+#[derive(Debug)]
+pub struct ImplicitStateRange {
+    pub start: usize,
+    pub len: usize
+}
+
+#[derive(Debug)]
 pub struct Rules {
     pub world_size: (usize, usize),
     pub states: Vec<State>,
-    pub transitions: Vec<Transition>
+    pub transitions: Vec<Transition>,
+    pub implicit_state_ranges: Vec<Option<ImplicitStateRange>>
 }
 
 pub type Transition = (usize, usize, Vec<ConditionsConjunction>);
 
 pub type ConditionsConjunction = Vec<Condition>;
 
+#[derive(Clone, Debug)]
 pub enum Condition {
     QuantityCondition(usize, ComparisonOperator, u8),
     NeighborCondition(NeighborCell, usize),
@@ -51,20 +62,22 @@ fn semantic_analysis(ast: & Ast) -> Result<Rules, Vec<String>> {
         errors.push("You should specify at least one state.".to_string());
     }
 
-    let (states, first_transition_node) = construct_states(&ast.first_state);
+    let (mut states, mut implicit_state_ranges, first_transition_node) = construct_states(&ast.first_state);
     control_states_distribution(&states, &ast.world_size, &mut errors);
-    let transitions = construct_transitions(first_transition_node, &states, &mut errors);
+    let (transitions, mut implicit_states) = construct_transitions(first_transition_node, &states, &mut implicit_state_ranges, &mut errors);
+    states.append(&mut implicit_states);
 
     match errors.len() {
-        0 => Ok(Rules { world_size: ast.world_size, states, transitions }),
+        0 => Ok(Rules { world_size: ast.world_size, states, transitions, implicit_state_ranges }),
         _ => Err(errors)
     }
 }
 
-fn construct_states(ast: & StateNode) -> (Vec<State>, & TransitionNode) {
+fn construct_states(ast: & StateNode) -> (Vec<State>, Vec<Option<ImplicitStateRange>>, & TransitionNode) {
     let mut curr_state_node = ast;
     let first_transition_node: &TransitionNode;
     let mut states = Vec::new();
+    let mut implicit_state_range = Vec::new();
     let mut id = 0;
     loop {
         match curr_state_node {
@@ -80,6 +93,7 @@ fn construct_states(ast: & StateNode) -> (Vec<State>, & TransitionNode) {
                     color: (red.clone(), green.clone(), blue.clone()),
                     distribution
                 });
+                implicit_state_range.push(None);
                 id += 1;
                 curr_state_node = state_node;
             },
@@ -89,7 +103,7 @@ fn construct_states(ast: & StateNode) -> (Vec<State>, & TransitionNode) {
             }
         }
     }
-    (states, first_transition_node)
+    (states, implicit_state_range, first_transition_node)
 }
 
 fn control_states_distribution(states: &Vec<State>, world_size: &(usize, usize), errors: &mut Vec<String>) {
@@ -126,9 +140,14 @@ fn control_states_distribution(states: &Vec<State>, world_size: &(usize, usize),
     }
 }
 
-fn construct_transitions(first_transition_node: &TransitionNode, states: &Vec<State>, errors: &mut Vec<String>) -> Vec<Transition> {
+fn construct_transitions(first_transition_node: &TransitionNode,
+                         states: &Vec<State>,
+                         implicit_state_ranges: &mut Vec<Option<ImplicitStateRange>>,
+                         errors: &mut Vec<String>) -> (Vec<Transition>, Vec<State>) {
     let mut curr_transition_node = first_transition_node;
     let mut transitions = Vec::new();
+    let mut implicit_states = Vec::new();
+
     loop {
         match curr_transition_node {
             TransitionNode::Transition(state_origin_name, state_destination_name, condition_node) => {
@@ -136,26 +155,54 @@ fn construct_transitions(first_transition_node: &TransitionNode, states: &Vec<St
                     Some(index) => index,
                     _ => {
                         errors.push(transition_undefined_state_error(state_origin_name, state_destination_name, state_origin_name));
-                        0   // whatever is the number here, it won't be used because an error occurred
+                        0   // whatever the number here is, it won't be used because an error occurred
                     }
                 };
                 let state_destination = match get_state_index(state_destination_name, &states) {
                     Some(index) => index,
                     _ => {
                         errors.push(transition_undefined_state_error(state_origin_name, state_destination_name, state_destination_name));
-                        0   // whatever is the number here, it won't be used because an error occurred
+                        0   // whatever the number here is, it won't be used because an error occurred
                     }
                 };
-                let (transition_node, processed_condition) = construct_condition(condition_node, &states, errors);
+                let (transition_node, processed_condition, transition_delay) = construct_condition(condition_node, &states, errors);
                 curr_transition_node = transition_node;
-                transitions.push((state_origin, state_destination, processed_condition));
+
+                let states_number = states.len() + implicit_states.len();
+                if transition_delay > 1 {
+                    // Intermediary states and transitions are created automatically when a transition has a delay.
+                    // This way the cell will "slide" along the states sled and it will looks like it stayed in the same state for several iterations.
+                    transitions.push((state_origin, states_number, processed_condition));
+                    implicit_states.push(State {
+                        id: states_number,
+                        name: states[state_origin].name.clone(),
+                        color: states[state_origin].color,
+                        distribution: StateDistribution::Quantity(0),
+                    });
+                    for i in 0..transition_delay - 2 {
+                        transitions.push((states_number + i, states_number + i + 1, vec![vec![Condition::True]; 1]));
+                        implicit_states.push(State {
+                            id: states_number + i + 1,
+                            name: states[state_origin].name.clone(),
+                            color: states[state_origin].color,
+                            distribution: StateDistribution::Quantity(0),
+                        });
+                    }
+                    transitions.push((states_number + transition_delay - 2, state_destination, vec![vec![Condition::True]; 1]));
+                    implicit_state_ranges[state_origin] = Some(ImplicitStateRange {
+                        start: states_number,
+                        len: states_number + transition_delay - 1
+                    });
+                } else {
+                    transitions.push((state_origin, state_destination, processed_condition));
+                }
             },
             TransitionNode::End => {
                 break;
             }
         }
     }
-    transitions
+    (transitions, implicit_states)
 }
 
 fn get_state_index(state_name: & String, states: & Vec<State>) -> Option<usize> {
@@ -164,11 +211,13 @@ fn get_state_index(state_name: & String, states: & Vec<State>) -> Option<usize> 
 
 fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
                        states: &Vec<State>,
-                       errors: &mut Vec<String>) -> (&'a TransitionNode, Vec<ConditionsConjunction>) {
+                       errors: &mut Vec<String>) -> (&'a TransitionNode, Vec<ConditionsConjunction>, usize) {
     let mut processed_condition = Vec::new();
     let mut curr_condition_conjunction = Vec::new();
     let mut curr_condition_node = root_condition_node;
+
     let next_transition_node: &TransitionNode;
+    let transition_delay: usize;
     loop {
         let (condition, next_condition_node) = match curr_condition_node {
             ConditionNode::QuantityCondition(state_name, comp_op, quantity, next_condition_node) => {
@@ -176,7 +225,7 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
                     Some(index) => index,
                     _ => {
                         errors.push(condition_undefined_state_error(state_name));
-                        0   // whatever is the number here, it won't be used because an error occurred
+                        0   // whatever the number here is, it won't be used because an error occurred
                     }
                 };
                 (Condition::QuantityCondition(state, comp_op.clone(), quantity.clone()), next_condition_node)
@@ -186,7 +235,7 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
                     Some(index) => index,
                     _ => {
                         errors.push(condition_undefined_state_error(state_name));
-                        0   // whatever is the number here, it won't be used because an error occurred
+                        0   // whatever the number here is, it won't be used because an error occurred
                     }
                 };
                 (Condition::NeighborCondition(cell.clone(), state), next_condition_node)
@@ -216,7 +265,8 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
                     curr_condition_conjunction = Vec::new();
                 }
             },
-            NextConditionNode::NextTransition(t) => {
+            NextConditionNode::NextTransition(opt_delay, t) => {
+                transition_delay = if let Some(delay) = opt_delay { *delay } else { 0 };
                 next_transition_node = t.as_ref();
                 if curr_condition_conjunction.len() > 0 {
                      processed_condition.push(curr_condition_conjunction);
@@ -225,7 +275,7 @@ fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
             }
         }
     }
-    (next_transition_node, processed_condition)
+    (next_transition_node, processed_condition, transition_delay)
 }
 
 fn transition_undefined_state_error(state_origin: & String,
