@@ -40,8 +40,8 @@ fn main() {
         },
         Err(errors) => {
             error!("Cellular automaton rules could not be parsed from file {}.", file_name);
-            for i in 0..errors.len() {
-                error!("{}", errors[i]);
+            for error in &errors {
+                error!("{}", error);
             }
         }
     }
@@ -73,7 +73,6 @@ fn run(rules: Rules) {
                     start = Instant::now();
                 }
             },
-            UserAction::ChangeSimulationSpeed => { /* TODO */ },
             UserAction::Quit => {
                 break;
             },

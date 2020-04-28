@@ -1,4 +1,3 @@
-use termion;
 use termion::{
     AsyncReader,
     event::Key,
@@ -15,7 +14,6 @@ pub enum Direction {
 pub enum UserAction {
     TranslateCamera(Direction),
     TogglePause,
-    ChangeSimulationSpeed,
     Quit,
     Nop
 }

@@ -14,7 +14,7 @@ impl Automaton {
         let states = &rules.states;
 
         // Initialize grid with default state.
-        let default_state = (&rules).states.iter()
+        let default_state = rules.states.iter()
             .find(|s| match s.distribution {
                 StateDistribution::Default => true,
                 _ => false
@@ -37,7 +37,7 @@ impl Automaton {
         }
     }
 
-    fn add_p_distribution_states(states: &Vec<State>, grid: &mut Vec<usize>, size: &(usize, usize)) {
+    fn add_p_distribution_states(states: &[State], grid: &mut Vec<usize>, size: &(usize, usize)) {
         let mut rng = rand::thread_rng();
         for x in 0..size.0 {
             for y in 0..size.1 {
@@ -46,8 +46,8 @@ impl Automaton {
                 let mut lower_bound = 0.0;
                 let mut upper_bound = 0.0;
 
-                for i in 0..states.len() {
-                    if let StateDistribution::Proportion(p) = states[i].distribution {
+                for (i, state) in states.iter().enumerate() {
+                    if let StateDistribution::Proportion(p) = state.distribution {
                         upper_bound += p;
                         if r_p >= lower_bound && r_p < upper_bound {
                             grid[index] = i;
@@ -59,11 +59,11 @@ impl Automaton {
         }
     }
 
-    fn add_q_distribution_states(states: &Vec<State>, grid: &mut Vec<usize>, size: &(usize, usize)) {
+    fn add_q_distribution_states(states: &[State], grid: &mut Vec<usize>, size: &(usize, usize)) {
         let mut rng = rand::thread_rng();
         let mut positions_used = Vec::new();
-        for i in 0..states.len() {
-            if let StateDistribution::Quantity(q) = states[i].distribution {
+        for (i, state) in states.iter().enumerate() {
+            if let StateDistribution::Quantity(q) = state.distribution {
                 let mut c = 0;
                 while c < q {
                     let pos = (rng.gen_range(0, size.0), rng.gen_range(0, size.1));
@@ -84,11 +84,9 @@ impl Automaton {
                 let index = self.get_index(x as isize, y as isize);
                 let state = self.grid[index];
                 for (state_origin, state_destination, conditions) in &self.rules.transitions {
-                    if state_origin == &state {
-                        if self.evaluate_conditions(x, y, conditions, rng) {
-                            self.grid_next[index] = state_destination.clone();
-                            break;
-                        }
+                    if state_origin == &state && self.evaluate_conditions(x, y, conditions, rng) {
+                        self.grid_next[index] = *state_destination;
+                        break;
                     }
                 }
             }
@@ -102,7 +100,7 @@ impl Automaton {
         }
     }
 
-    fn evaluate_conditions(& self, x: usize, y: usize, conditions: &Vec<ConditionsConjunction>, rng: &mut ThreadRng) -> bool {
+    fn evaluate_conditions(& self, x: usize, y: usize, conditions: &[ConditionsConjunction], rng: &mut ThreadRng) -> bool {
         match conditions.iter().find(|conjunction| self.evaluate_conjunction(x, y, conjunction, rng)) {
             Some(_) => true,
             _ => false
@@ -119,11 +117,11 @@ impl Automaton {
     fn evaluate_condition(& self, x: usize, y: usize, condition: &Condition, rng: &mut ThreadRng) -> bool {
         match condition {
             Condition::QuantityCondition(state, comp, quantity) => {
-                let count = self.count_state_in_neighborhood(x, y, state);
-                Self::evaluate_quantity_condition(&count, comp, quantity)
+                let count = self.count_state_in_neighborhood(x, y, *state);
+                Self::evaluate_quantity_condition(count, *comp, *quantity)
             },
             Condition::NeighborCondition(neighbor, state) => {
-                let index = self.get_index_of_neighbor(x as isize, y as isize, neighbor);
+                let index = self.get_index_of_neighbor(x as isize, y as isize, *neighbor);
                 self.is_state(self.grid[index], *state)
             },
             Condition::RandomCondition(proportion) => {
@@ -134,13 +132,13 @@ impl Automaton {
         }
     }
 
-    fn count_state_in_neighborhood(& self, x: usize, y: usize, state: &usize) -> u8 {
+    fn count_state_in_neighborhood(& self, x: usize, y: usize, state: usize) -> u8 {
         let mut count: u8 = 0;
         for u in -1..2 {
             for v in -1..2 {
                 if u != 0 || v != 0 {
                     let index =  self.get_index(x as isize + u, y as isize + v);
-                    if self.is_state(self.grid[index], *state) {
+                    if self.is_state(self.grid[index], state) {
                         count += 1;
                     }
                 }
@@ -159,7 +157,7 @@ impl Automaton {
         false
     }
 
-    fn evaluate_quantity_condition(count: &u8, comp: &ComparisonOperator, quantity: &u8) -> bool {
+    fn evaluate_quantity_condition(count: u8, comp: ComparisonOperator, quantity: u8) -> bool {
         match comp {
             ComparisonOperator::Greater => count > quantity,
             ComparisonOperator::Lesser => count < quantity,
@@ -170,7 +168,7 @@ impl Automaton {
         }
     }
 
-    fn get_index_of_neighbor(& self, x: isize, y: isize, neighbor: &NeighborCell) -> usize {
+    fn get_index_of_neighbor(& self, x: isize, y: isize, neighbor: NeighborCell) -> usize {
         let (x_n, y_n) = match neighbor {
             NeighborCell::A => (x - 1, y - 1),
             NeighborCell::B => (x, y - 1),

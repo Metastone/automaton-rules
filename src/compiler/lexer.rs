@@ -96,7 +96,7 @@ impl<'a> Lexer<'a> {
 
         // The token is a two-characters operator
         if c2 == expected_char {
-            return Ok(Token::new(token, &self));
+            Ok(Token::new(token, &self))
         }
         // The token is a single character operator ('<' or '>')
         else if (c == '<' || c == '>')
@@ -107,11 +107,11 @@ impl<'a> Lexer<'a> {
                 || OPERATOR_FIRST_CHARS.contains(&c2)) {
             token.pop();
             self.rewind_char()?;
-            return Ok(Token::new(token, &self));
+            Ok(Token::new(token, &self))
         }
         // The token starts as an operator but not one
         else {
-            return Err(format!("Invalid token {}. Note : recognized operators are {:?} and {:?}.", Token::new(token, &self), SINGLE_CHAR_OPERATORS, TWO_CHAR_OPERATORS));
+            Err(format!("Invalid token {}. Note : recognized operators are {:?} and {:?}.", Token::new(token, &self), SINGLE_CHAR_OPERATORS, TWO_CHAR_OPERATORS))
         }
     }
 
@@ -159,7 +159,7 @@ impl<'a> Lexer<'a> {
         }
 
         // No token found and we reached end-of-file
-        if token.len() == 0 && c == '\u{0}' {
+        if token.is_empty() && c == '\u{0}' {
             return Ok(Token::new(String::new(), &self))
         }
 

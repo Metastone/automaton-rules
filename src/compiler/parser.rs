@@ -2,7 +2,7 @@
 
 use crate::compiler::lexer::{Token, Lexer};
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum ComparisonOperator {
     Greater,
     Lesser,
@@ -12,7 +12,7 @@ pub enum ComparisonOperator {
     Different
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum NeighborCell {
     A,
     B,
@@ -24,6 +24,7 @@ pub enum NeighborCell {
     H
 }
 
+#[derive(Copy, Clone, Debug)]
 pub enum BooleanOperator {
     And,
     Or
@@ -176,8 +177,8 @@ fn parse_next_condition(lexer: &mut Lexer) -> Result<NextConditionNode, String> 
     else if token.str == "," {
         expect(lexer, vec!["delay"])?;
         let delay = expect_delay(lexer)?;
-        expect(lexer, vec![")"]);
-        expect(lexer, vec![","]);
+        expect(lexer, vec![")"])?;
+        expect(lexer, vec![","])?;
         Ok(NextConditionNode::NextTransition(Some(delay), Box::new(parse_transitions(lexer)?)))
     }
     else if token.str == ")" {
@@ -193,15 +194,15 @@ fn parse_next_condition(lexer: &mut Lexer) -> Result<NextConditionNode, String> 
 fn expect(lexer: &mut Lexer, expected: Vec<&str>) -> Result<String, String> {
     let mut expected_as_sentence = String::new();
     let token = lexer.get_next_token()?;
-    for i in 0..expected.len() {
-        if token.str == expected[i] {
+    for (i, item) in expected.iter().enumerate() {
+        if token.str == *item {
             return Ok(token.str);
         }
         if i != 0 {
             expected_as_sentence.push_str(" or ");
         }
         expected_as_sentence.push_str("\"");
-        expected_as_sentence.push_str(expected[i]);
+        expected_as_sentence.push_str(item);
         expected_as_sentence.push_str("\"");
     }
     Err(format!("Expected {}, found {}.", expected_as_sentence, token))

@@ -1,5 +1,4 @@
 use std::io::{stdout, Write};
-use termion;
 use crate::camera::Image;
 
 pub struct Display {
@@ -23,7 +22,7 @@ impl Display {
     }
 
     pub fn render(&mut self, image: & Image) {
-        if self.colors.len() == 0 {
+        if self.colors.is_empty() {
             self.colors = image.colors.iter()
                 .map(|(r, g, b)| (to_ansi_value(*r), to_ansi_value(*g), to_ansi_value(*b)))
                 .collect::<Vec<_>>();
@@ -44,7 +43,7 @@ impl Display {
                     print!("{}{}\u{2588}",
                            termion::cursor::Goto((x + 1) as u16, (y + 1) as u16),
                            termion::color::Fg(termion::color::AnsiValue::rgb(r, g, b)));
-                    self.last_image[x][y] = image.grid[x][y].clone();
+                    self.last_image[x][y] = image.grid[x][y];
                 }
             }
         }
@@ -54,7 +53,7 @@ impl Display {
     }
 
     pub fn clean(&mut self) {
-        let cursor_vert_pos = if self.last_image.len() == 0 { 1 } else { self.last_image[0].len() + 1 };
+        let cursor_vert_pos = if self.last_image.is_empty() { 1 } else { self.last_image[0].len() + 1 };
         print!("{}{}", termion::cursor::Goto(1, cursor_vert_pos as u16), termion::color::Fg(termion::color::White));
         stdout().flush().unwrap();
     }
