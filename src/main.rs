@@ -90,6 +90,8 @@ fn run(rules: Rules) {
 
     display.clean();
 
-    runtime_duration += start.elapsed();
+    if !pause {
+        runtime_duration += start.elapsed();
+    }
     println!("Over. {} iterations / s", (i as f32 / runtime_duration.as_millis() as f32)*1000.0);
 }
