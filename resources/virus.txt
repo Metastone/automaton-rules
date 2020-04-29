@@ -9,6 +9,7 @@ states {
 
 transitions {
     (alive, infected, infected >= 1),
-    (infected, dead, rand 0.5, delay 5),
-    (infected, resistant, true, delay 3),
+    (infected, dead, rand 0.5, delay 15),
+    (infected, resistant, true, delay 10),
 }
+

@@ -25,6 +25,9 @@ impl Automaton {
         // Add the states that have a proportion distribution.
         Self::add_p_distribution_states(states, &mut grid, &size);
 
+        // Add the states that have a box distribution.
+        Self::add_box_distribution_states(states, &mut grid, &size);
+
         // Add the states that have a quantity distribution. They can overwrite states without a quantity distribution.
         Self::add_q_distribution_states(states, &mut grid, &size);
 
@@ -41,7 +44,7 @@ impl Automaton {
         let mut rng = rand::thread_rng();
         for x in 0..size.0 {
             for y in 0..size.1 {
-                let index = y * size.0 + x;
+                let index = Self::get_index(x as isize, y as isize, size);
                 let r_p: f64 = rng.gen();
                 let mut lower_bound = 0.0;
                 let mut upper_bound = 0.0;
@@ -59,6 +62,19 @@ impl Automaton {
         }
     }
 
+    fn add_box_distribution_states(states: &[State], grid: &mut Vec<usize>, size: &(usize, usize)) {
+        for (i, state) in states.iter().enumerate() {
+            if let StateDistribution::Box(x_box, y_box, width, height) = state.distribution {
+                for x in x_box..(x_box + width) {
+                    for y in y_box..(y_box + height) {
+                        let index = Self::get_index(x as isize, y as isize, size);
+                        grid[index] = i;
+                    }
+                }
+            }
+        }
+    }
+
     fn add_q_distribution_states(states: &[State], grid: &mut Vec<usize>, size: &(usize, usize)) {
         let mut rng = rand::thread_rng();
         let mut positions_used = Vec::new();
@@ -68,7 +84,7 @@ impl Automaton {
                 while c < q {
                     let pos = (rng.gen_range(0, size.0), rng.gen_range(0, size.1));
                     if !positions_used.contains(&pos) {
-                        let index = pos.1 * size.0 + pos.0;
+                        let index = Self::get_index(pos.0 as isize, pos.1 as isize, size);
                         grid[index] = i;
                         positions_used.push(pos);
                         c += 1;
@@ -81,7 +97,7 @@ impl Automaton {
     pub fn tick(&mut self, rng: &mut ThreadRng) {
         for x in 0..self.rules.world_size.0 {
             for y in 0..self.rules.world_size.1 {
-                let index = self.get_index(x as isize, y as isize);
+                let index = Self::get_index(x as isize, y as isize, &self.rules.world_size);
                 let state = self.grid[index];
                 for (state_origin, state_destination, conditions) in &self.rules.transitions {
                     if state_origin == &state && self.evaluate_conditions(x, y, conditions, rng) {
@@ -94,7 +110,7 @@ impl Automaton {
 
         for x in 0..self.rules.world_size.0 {
             for y in 0..self.rules.world_size.1 {
-                let index = self.get_index(x as isize, y as isize);
+                let index = Self::get_index(x as isize, y as isize, &self.rules.world_size);
                 self.grid[index] = self.grid_next[index];
             }
         }
@@ -121,7 +137,7 @@ impl Automaton {
                 Self::evaluate_quantity_condition(count, *comp, *quantity)
             },
             Condition::NeighborCondition(neighbor, state) => {
-                let index = self.get_index_of_neighbor(x as isize, y as isize, *neighbor);
+                let index = Self::get_index_of_neighbor(x as isize, y as isize, *neighbor, &self.rules.world_size);
                 self.is_state(self.grid[index], *state)
             },
             Condition::RandomCondition(proportion) => {
@@ -137,7 +153,7 @@ impl Automaton {
         for u in -1..2 {
             for v in -1..2 {
                 if u != 0 || v != 0 {
-                    let index =  self.get_index(x as isize + u, y as isize + v);
+                    let index =  Self::get_index(x as isize + u, y as isize + v, &self.rules.world_size);
                     if self.is_state(self.grid[index], state) {
                         count += 1;
                     }
@@ -168,7 +184,7 @@ impl Automaton {
         }
     }
 
-    fn get_index_of_neighbor(& self, x: isize, y: isize, neighbor: NeighborCell) -> usize {
+    fn get_index_of_neighbor(x: isize, y: isize, neighbor: NeighborCell, size: &(usize, usize)) -> usize {
         let (x_n, y_n) = match neighbor {
             NeighborCell::A => (x - 1, y - 1),
             NeighborCell::B => (x, y - 1),
@@ -179,11 +195,11 @@ impl Automaton {
             NeighborCell::G => (x, y + 1),
             NeighborCell::H => (x + 1, y + 1)
         };
-        self.get_index(x_n, y_n)
+        Self::get_index(x_n, y_n, size)
     }
 
-    fn get_index(&self, x: isize, y: isize) -> usize {
-        Self::tore_correction(y, self.rules.world_size.1) * self.rules.world_size.0 + Self::tore_correction(x, self.rules.world_size.0)
+    fn get_index(x: isize, y: isize, size: &(usize, usize)) -> usize {
+        Self::tore_correction(y, size.1) * size.0 + Self::tore_correction(x, size.0)
     }
 
     /// The world is a tore, so the value range can be )-inf; +inf(, and it will be mapped to (0; upper_bound-1).
@@ -200,7 +216,7 @@ impl Automaton {
     }
 
     pub fn get_state(&self, x: isize, y: isize) -> usize {
-        self.grid[self.get_index(x, y)]
+        self.grid[Self::get_index(x, y, &self.rules.world_size)]
     }
 
     pub fn get_colors(&self) -> Vec<(u8, u8, u8)> {

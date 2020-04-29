@@ -1,0 +1,9 @@
+size (200, 50)
+
+states {
+    (default, 255, 0, 0),
+    (test, 255, 0, 0, box 2 3 300 60),
+}
+
+transitions {
+}

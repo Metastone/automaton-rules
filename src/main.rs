@@ -28,11 +28,13 @@ use termion::raw::IntoRawMode;
 // TODO make file to run a program argument
 // TODO add basic arithmetic (addition, subtraction) in language for conditions
 // TODO make the code in semantic.rs more readable
+// TODO add an error when two states have the same name
+// TODO implement camera zoom / dezoom
 
 fn main() {
     env_logger::init();
 
-    let file_name = "/home/metastone/Documents/projects/mutations/resources/virus.txt";
+    let file_name = "/home/metastone/Documents/projects/mutations/resources/gravity.txt";
     match parse(file_name) {
         Ok(rules) => {
             info!("Cellular automaton rules where parsed successfully from file {}.", file_name);

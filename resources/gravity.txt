@@ -1,0 +1,12 @@
+size (200, 50)
+
+states {
+    (background, 131, 209, 242),
+    (rock, 84, 92, 99, proportion 0.2),
+    (floating, 192, 193, 139, box 0 45 200 5),
+}
+
+transitions {
+    (background, rock, B is rock),
+    (rock, background, G is background),
+}

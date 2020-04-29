@@ -7,6 +7,7 @@ use crate::compiler::parser::*;
 pub enum StateDistribution {
     Proportion(f64),
     Quantity(usize),
+    Box(usize, usize, usize, usize),
     Default
 }
 
@@ -85,6 +86,7 @@ fn construct_states(ast: & StateNode) -> (Vec<State>, Vec<Option<ImplicitStateRa
                 let (distribution, state_node) = match state_distribution_node {
                     StateDistributionNode::Proportion(proportion, state_node) => (StateDistribution::Proportion(*proportion), state_node.as_ref()),
                     StateDistributionNode::Quantity(quantity, state_node) => (StateDistribution::Quantity(*quantity), state_node.as_ref()),
+                    StateDistributionNode::Box(x, y, width, height, state_node) => (StateDistribution::Box(*x, *y, *width, *height), state_node.as_ref()),
                     StateDistributionNode::Default(state_node) => (StateDistribution::Default, state_node.as_ref())
                 };
                 states.push(State {
@@ -137,6 +139,22 @@ fn control_states_distribution(states: &[State], world_size: &(usize, usize), er
         errors.push(format!(
             "The sum of state's quantities is {}, but the world cannot hold that, its size is only {} * {} = {}.",
             quantities_sum, world_size.0, world_size.1, q_max));
+    }
+
+    for state in states.iter() {
+        if let StateDistribution::Box(_, _, width, height) = state.distribution {
+            // Note : No need to check if size are 0 because it's already done in syntax analysis.
+            if width > world_size.0 {
+                errors.push(format!(
+                    "For state \"{}\", box width cannot be {} because it is greater than the world's width ({})",
+                    state.name, width, world_size.0));
+            }
+            if height > world_size.1 {
+                errors.push(format!(
+                    "For state \"{}\", box height cannot be {} because it is greater than the world's height ({})",
+                    state.name, height, world_size.1));
+            }
+        }
     }
 }
 
@@ -290,6 +308,7 @@ mod tests {
     use crate::compiler::semantic::parse;
 
     static BENCHMARK_FILE: &str = "resources/tests/compiler_benchmark.txt";
+    static BOX_ERRORS_FILE: &str = "resources/tests/semantic_box_errors.txt";
     static CONDITION_UNDEFINED_STATE_FILE: &str = "resources/tests/semantic_condition_undefined_state.txt";
     static NO_STATES_FILE: &str = "resources/tests/semantic_no_states.txt";
     static QUANTITIES_TOO_MUCH_FILE: &str = "resources/tests/semantic_quantities_too_much.txt";
@@ -303,6 +322,18 @@ mod tests {
     fn parse_benchmark_succeeds() {
         match parse(BENCHMARK_FILE) {
             Ok(_) => assert!(true),
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_box_distribution_several_errors_fails() {
+        match parse(BOX_ERRORS_FILE) {
+            Err(errors) => {
+                assert_eq!(errors.len(), 2);
+                assert_eq!(errors[0], "For state \"test\", box width cannot be 300 because it is greater than the world's width (200)");
+                assert_eq!(errors[1], "For state \"test\", box height cannot be 60 because it is greater than the world's height (50)");
+            },
             _ => assert!(false)
         }
     }

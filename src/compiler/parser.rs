@@ -50,6 +50,7 @@ pub enum TransitionNode {
 pub enum StateDistributionNode {
     Proportion(f64, Box<StateNode>),
     Quantity(usize, Box<StateNode>),
+    Box(usize, usize, usize, usize, Box<StateNode>),
     Default(Box<StateNode>)
 }
 
@@ -115,17 +116,23 @@ fn parse_state_distribution(lexer: &mut Lexer) -> Result<StateDistributionNode, 
         expect(lexer, vec![","])?;
         Ok(StateDistributionNode::Default(Box::new(parse_state(lexer)?)))
     } else {
-        let token2 = expect(lexer, vec!["proportion", "quantity"])?;
+        let token2 = expect(lexer, vec!["proportion", "quantity", "box"])?;
         if token2 == "proportion" {
             let proportion = expect_proportion(lexer)?;
             expect(lexer, vec![")"])?;
             expect(lexer, vec![","])?;
             Ok(StateDistributionNode::Proportion(proportion, Box::new(parse_state(lexer)?)))
-        } else {
+        } else if token2 == "quantity" {
             let quantity = expect_usize(lexer)?;
             expect(lexer, vec![")"])?;
             expect(lexer, vec![","])?;
             Ok(StateDistributionNode::Quantity(quantity, Box::new(parse_state(lexer)?)))
+        } else {
+            let (x, y) = (expect_usize(lexer)?, expect_usize(lexer)?);
+            let (width, height) = (expect_positive_usize(lexer)?, expect_positive_usize(lexer)?);
+            expect(lexer, vec![")"])?;
+            expect(lexer, vec![","])?;
+            Ok(StateDistributionNode::Box(x, y, width, height, Box::new(parse_state(lexer)?)))
         }
     }
 }
@@ -264,6 +271,17 @@ fn expect_usize(lexer: &mut Lexer) -> Result<usize, String> {
     }
 }
 
+/// Return the next token translated into a strictly positive unsigned integer if possible, or raises an error.
+fn expect_positive_usize(lexer: &mut Lexer) -> Result<usize, String> {
+    let token = lexer.get_next_token()?;
+    if let Ok(number) = token.str.parse::<usize>() {
+        if number > 0 {
+            return Ok(number);
+        }
+    }
+    Err(format!("Expected an unsigned integer > 0, found {}.", token))
+}
+
 /// Return the next token translated into a integer > 1 if possible, or raises an error.
 fn expect_delay(lexer: &mut Lexer) -> Result<usize, String> {
     let token = lexer.get_next_token()?;
@@ -325,6 +343,7 @@ mod tests {
     static EXPECT_ID_FILE: &str = "resources/tests/parser_expected_identifier.txt";
     static EXPECT_IS_FILE: &str = "resources/tests/parser_expected_is_token.txt";
     static EXPECT_NEIGHBOR_NB_FILE: &str = "resources/tests/parser_expected_neighbor_number.txt";
+    static EXPECT_POSITIVE_USIZE_FILE: &str = "resources/tests/parser_expected_positive_usize.txt";
     static EXPECT_PROPORTION_FILE: &str = "resources/tests/parser_expected_proportion.txt";
     static EXPECT_U8_FILE: &str = "resources/tests/parser_expected_u8.txt";
     static EXPECT_USIZE_FILE: &str = "resources/tests/parser_expected_usize.txt";
@@ -395,6 +414,14 @@ mod tests {
     fn parse_expect_neighbor_number_fails() {
          match parse(EXPECT_NEIGHBOR_NB_FILE) {
             Err(error) => assert_eq!(error, "Expected an integer between 0 and 8, found \"22\" - line 9, column 28."),
+            _ => assert!(false)
+        }
+    }
+
+    #[test]
+    fn parse_expect_positive_usize_fails() {
+        match parse(EXPECT_POSITIVE_USIZE_FILE) {
+            Err(error) => assert_eq!(error, "Expected an unsigned integer > 0, found \"0\" - line 7, column 39."),
             _ => assert!(false)
         }
     }
