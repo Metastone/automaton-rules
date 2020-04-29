@@ -11,8 +11,14 @@ pub enum Direction {
     Down
 }
 
+pub enum Zoom {
+    In,
+    Out
+}
+
 pub enum UserAction {
     TranslateCamera(Direction),
+    ZoomCamera(Zoom),
     TogglePause,
     Quit,
     Nop
@@ -37,6 +43,8 @@ impl Inputs {
                 Key::Right => UserAction::TranslateCamera(Direction::Right),
                 Key::Up => UserAction::TranslateCamera(Direction::Up),
                 Key::Down => UserAction::TranslateCamera(Direction::Down),
+                Key::Char('z') => UserAction::ZoomCamera(Zoom::In),
+                Key::Char('s') => UserAction::ZoomCamera(Zoom::Out),
                 Key::Char('p') => UserAction::TogglePause,
                 _ => UserAction::Nop
             }

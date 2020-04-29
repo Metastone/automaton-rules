@@ -29,12 +29,12 @@ use termion::raw::IntoRawMode;
 // TODO add basic arithmetic (addition, subtraction) in language for conditions
 // TODO make the code in semantic.rs more readable
 // TODO add an error when two states have the same name
-// TODO implement camera zoom / dezoom
+// TODO extend language : add not operator
 
 fn main() {
     env_logger::init();
 
-    let file_name = "/home/metastone/Documents/projects/mutations/resources/gravity.txt";
+    let file_name = "/home/metastone/Documents/projects/mutations/resources/game_of_life.txt";
     match parse(file_name) {
         Ok(rules) => {
             info!("Cellular automaton rules where parsed successfully from file {}.", file_name);
@@ -67,6 +67,7 @@ fn run(rules: Rules) {
     loop {
         match inputs.read_keyboard() {
             UserAction::TranslateCamera(direction) => { camera.translate(&direction); },
+            UserAction::ZoomCamera(zoom) => { camera.zoom(&zoom); },
             UserAction::TogglePause => {
                 pause = !pause;
                 if pause {
@@ -83,7 +84,7 @@ fn run(rules: Rules) {
 
         let image = camera.capture(&automaton);
         display.render(&image);
-        sleep(Duration::from_millis(10));
+        sleep(Duration::from_millis(50));
 
         if !pause {
             automaton.tick(&mut rng);

@@ -31,6 +31,17 @@ impl Display {
         // Note : The case where the number of lines or columns of the image is 0 should be forbidden at configuration level.
 
         if (image.grid.len() != self.last_image.len()) || (image.grid[0].len() != self.last_image[0].len()) {
+            // Clean-up old parts of display not used anymore if new image is smaller
+            for x in 0..self.last_image.len() {
+                for y in 0..self.last_image[0].len() {
+                    if x >= image.grid.len() || y >= image.grid[0].len() {
+                        println!("{}{}\u{2588}",
+                                 termion::cursor::Goto((x + 1) as u16, (y + 1) as u16),
+                                 termion::color::Fg(termion::color::AnsiValue::rgb(0, 0, 0)));
+                    }
+                }
+            }
+
             self.last_image = vec![vec![0; image.grid[0].len()]; image.grid.len()];
             self.redraw = true;
         }
