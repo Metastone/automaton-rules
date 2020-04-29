@@ -79,11 +79,12 @@ fn run(rules: Rules) {
             UserAction::Nop => {}
         }
 
+        let image = camera.capture(&automaton);
+        display.render(&image);
+        sleep(Duration::from_millis(10));
+
         if !pause {
-            let image = camera.capture(&automaton);
-            display.render(&image);
             automaton.tick(&mut rng);
-            sleep(Duration::from_millis(10));
             i += 1;
         }
     }
