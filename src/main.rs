@@ -10,9 +10,13 @@ mod camera;
 mod display;
 mod inputs;
 
-use std::time::{Instant, Duration};
-use std::thread::sleep;
-use std::io;
+use std::{
+    env,
+    time::{Instant, Duration},
+    thread::sleep,
+    io,
+    process
+};
 use compiler::semantic::{Rules, parse};
 use automaton::Automaton;
 use camera::Camera;
@@ -20,21 +24,16 @@ use display::Display;
 use inputs::{Inputs, UserAction};
 use termion::raw::IntoRawMode;
 
-// TODO Make traits for inputs and display in order to allow different displays.
-// TODO avoid systematic camera's image memory reallocation
-// TODO document language grammar
-// TODO add a save / load system to save a current state (and the associated automaton rules attached ?)
-// TODO multi-thread automaton tick & camera capture. idea : iterators chaining to do both at once ?
-// TODO make file to run a program argument
-// TODO add basic arithmetic (addition, subtraction) in language for conditions
-// TODO make the code in semantic.rs more readable
-// TODO add an error when two states have the same name
-// TODO extend language : add not operator
-
 fn main() {
     env_logger::init();
 
-    let file_name = "/home/metastone/Documents/projects/mutations/resources/game_of_life.txt";
+    let args: Vec<String> = env::args().collect();
+    if args.len() != 2 {
+        error!("USAGE : <automaton_file_path>");
+        process::exit(1);
+    }
+    let file_name = &args[1];
+
     match parse(file_name) {
         Ok(rules) => {
             info!("Cellular automaton rules where parsed successfully from file {}.", file_name);
