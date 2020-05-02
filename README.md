@@ -60,4 +60,4 @@ The transition 'dead -> aliveaaazerty' refers to the state "aliveaaazerty", but 
 * make the code in semantic.rs more readable
 * add an error when two states have the same name
 * extend language : add not operator
-
+* Don't recompute position all the time in automaton, just store it

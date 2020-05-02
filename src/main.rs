@@ -53,7 +53,6 @@ fn run(rules: Rules) {
     let mut camera = Camera::new(0, 0);
     let mut display = Display::new();
     let mut inputs = Inputs::new();
-    let mut rng = rand::thread_rng();
 
     let _stdout = io::stdout().into_raw_mode().unwrap();
     display.init();
@@ -63,7 +62,7 @@ fn run(rules: Rules) {
     let mut i = 0;
     let mut pause = false;
 
-    loop {
+    while i < 500 {
         match inputs.read_keyboard() {
             UserAction::TranslateCamera(direction) => { camera.translate(&direction); },
             UserAction::ZoomCamera(zoom) => { camera.zoom(&zoom); },
@@ -83,10 +82,10 @@ fn run(rules: Rules) {
 
         let image = camera.capture(&automaton);
         display.render(&image);
-        sleep(Duration::from_millis(50));
+        sleep(Duration::from_millis(10));
 
         if !pause {
-            automaton.tick(&mut rng);
+            automaton.tick();
             i += 1;
         }
     }
