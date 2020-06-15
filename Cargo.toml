@@ -3,8 +3,15 @@ name = "mutations"
 version = "0.1.0"
 authors = ["cppIsTheBest <hugo.boulanger@etu.enseeiht.fr>"]
 edition = "2018"
+default-run = "main"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+[[bin]]
+name = "main"
+path = "src/main.rs"
+
+[[bin]]
+name = "perf"
+path = "src/perf.rs"
 
 [dependencies]
 log = "0.4.8"

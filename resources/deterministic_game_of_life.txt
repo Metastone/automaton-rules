@@ -1,0 +1,33 @@
+size (200, 50)
+
+states {
+    (dead, 0, 0, 0),
+    (alive, 255, 255, 255, quantity 0),
+
+    (bloc1, 255, 255, 255, box 1 1 1 3),
+    (bloc2, 255, 255, 255, box 10 45 3 1),
+    (bloc3, 255, 255, 255, box 120 10 3 1),
+    (bloc4, 255, 255, 255, box 160 40 1 3),
+
+    (spaceshipPart1, 255, 255, 255, box 4 20 2 1),
+    (spaceshipPart2, 255, 255, 255, box 0 21 4 1),
+    (spaceshipPart3, 255, 255, 255, box 5 21 2 1),
+    (spaceshipPart4, 255, 255, 255, box 0 22 6 1),
+    (spaceshipPart5, 255, 255, 255, box 1 23 4 1),
+}
+
+transitions {
+    (bloc1, alive, true),
+    (bloc2, alive, true),
+    (bloc3, alive, true),
+    (bloc4, alive, true),
+
+    (spaceshipPart1, alive, true),
+    (spaceshipPart2, alive, true),
+    (spaceshipPart3, alive, true),
+    (spaceshipPart4, alive, true),
+    (spaceshipPart5, alive, true),
+
+    (alive, dead, alive < 2 || alive > 3),
+    (dead, alive, alive == 3),
+}
