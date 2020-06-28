@@ -1,19 +1,12 @@
 #[macro_use]
 extern crate log;
 
-mod compiler;
-mod automaton;
-mod camera;
-mod display;
-mod inputs;
-mod executor;
-
 use std::{
     env,
     process,
 };
 
-use executor::{
+use mutations::executor::{
     execute,
     Conf,
     MaxIterationCount

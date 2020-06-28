@@ -1,4 +1,4 @@
-use crate::compiler::semantic::{State, Rules, Condition, StateDistribution, ConditionsConjunction};
+use crate::compiler::semantic::{State, Rules, Condition, StateDistribution};
 use crate::compiler::parser::{NeighborCell, ComparisonOperator};
 use rand::{Rng, rngs::ThreadRng};
 use rayon::prelude::*;
@@ -137,21 +137,21 @@ impl Automaton {
 }
 
 impl Rules {
-    fn evaluate_conditions(&self, grid: &Vec<Cell>, position: (usize, usize), conditions: &[ConditionsConjunction], rng: &mut ThreadRng) -> bool {
+    fn evaluate_conditions(&self, grid: &[Cell], position: (usize, usize), conditions: &[Vec<Condition>], rng: &mut ThreadRng) -> bool {
         match conditions.iter().find(|conjunction| self.evaluate_conjunction(grid, position, conjunction, rng)) {
             Some(_) => true,
             _ => false
         }
     }
 
-    fn evaluate_conjunction(&self, grid: &Vec<Cell>, position: (usize, usize), conjunction: &ConditionsConjunction, rng: &mut ThreadRng) -> bool {
+    fn evaluate_conjunction(&self, grid: &[Cell], position: (usize, usize), conjunction: &[Condition], rng: &mut ThreadRng) -> bool {
         match conjunction.iter().find(|condition| !self.evaluate_condition(grid, position, condition, rng)) {
             Some(_) => false,
             _ => true
         }
     }
 
-    fn evaluate_condition(&self, grid: &Vec<Cell>, position: (usize, usize), condition: &Condition, rng: &mut ThreadRng) -> bool {
+    fn evaluate_condition(&self, grid: &[Cell], position: (usize, usize), condition: &Condition, rng: &mut ThreadRng) -> bool {
         match condition {
             Condition::QuantityCondition(state, comp, quantity) => {
                 let count = self.count_state_in_neighborhood(grid, position, *state);
@@ -170,7 +170,7 @@ impl Rules {
         }
     }
 
-    fn count_state_in_neighborhood(&self, grid: &Vec<Cell>, (x, y): (usize, usize), state: usize) -> u8 {
+    fn count_state_in_neighborhood(&self, grid: &[Cell], (x, y): (usize, usize), state: usize) -> u8 {
         let mut count: u8 = 0;
         for u in -1..2 {
             for v in -1..2 {

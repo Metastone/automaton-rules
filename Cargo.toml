@@ -5,14 +5,6 @@ authors = ["cppIsTheBest <hugo.boulanger@etu.enseeiht.fr>"]
 edition = "2018"
 default-run = "main"
 
-[[bin]]
-name = "main"
-path = "src/main.rs"
-
-[[bin]]
-name = "perf"
-path = "src/perf.rs"
-
 [dependencies]
 log = "0.4.8"
 env_logger = "0.7.1"

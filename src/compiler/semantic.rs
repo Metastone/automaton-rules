@@ -33,9 +33,7 @@ pub struct Rules {
     pub implicit_state_ranges: Vec<Option<ImplicitStateRange>>
 }
 
-pub type Transition = (usize, usize, Vec<ConditionsConjunction>);
-
-pub type ConditionsConjunction = Vec<Condition>;
+pub type Transition = (usize, usize, Vec<Vec<Condition>>);
 
 #[derive(Clone, Debug)]
 pub enum Condition {
@@ -222,7 +220,7 @@ fn get_state_index(state_name: &str, states: &[State]) -> Option<usize> {
 
 fn construct_condition<'a>(root_condition_node: &'a ConditionNode,
                        states: &[State],
-                       errors: &mut Vec<String>) -> (&'a TransitionNode, Vec<ConditionsConjunction>, usize) {
+                       errors: &mut Vec<String>) -> (&'a TransitionNode, Vec<Vec<Condition>>, usize) {
     let mut processed_condition = Vec::new();
     let mut curr_condition_conjunction = Vec::new();
     let mut curr_condition_node = root_condition_node;
