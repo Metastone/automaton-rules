@@ -43,7 +43,7 @@ pub fn execute(conf: &Conf) {
 
 fn execute_rules(conf: &Conf, rules: Rules) {
     let mut automaton = Automaton::new(rules);
-    let mut camera = Camera::new(0, 0);
+    let mut camera = Camera::new(0, 0, &automaton);
     let mut display = Display::new();
     let mut inputs = Inputs::new();
 

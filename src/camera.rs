@@ -9,36 +9,49 @@ pub struct Image {
     pub colors: Vec<(u8, u8, u8)>   // 16M color
 }
 
-/// The camera's (0,0) position is at the upper-left of the field of view.
-pub struct Camera {
-    position: (isize, isize),
-    size: (f64, f64)
-}
-
-impl Camera {
-    pub fn new(x: isize, y: isize) -> Camera {
-        Camera {
-            position: (x, y),
-            size: (200.0, 50.0)
+impl Image {
+    fn new(size: (f64, f64), automaton: &Automaton) -> Image {
+        Image {
+            grid: vec![vec![0; size.1 as usize]; size.0 as usize],
+            colors: automaton.get_colors()
         }
     }
 
-    pub fn capture(&self, automaton: &Automaton) -> Image {
-        let mut grid = Vec::new();
-        for x_c in 0..(self.size.0 as usize) {
-            let mut column = Vec::new();
-            for y_c in 0..(self.size.1 as usize) {
-                let x = x_c as isize + self.position.0;
-                let y = y_c as isize + self.position.1;
-                column.push(automaton.get_state(x, y));
-            }
-            grid.push(column);
-        }
+    fn resize(&mut self, new_size: (f64, f64)) {
+        self.grid = vec![vec![0; new_size.1 as usize]; new_size.0 as usize];
+    }
 
-        Image {
-            grid,
-            colors: automaton.get_colors()
+    fn capture(&mut self, camera_pos: (isize, isize), automaton: &Automaton) {
+        for (x_c, column) in self.grid.iter_mut().enumerate() {
+            for (y_c, pixel) in column.iter_mut().enumerate() {
+                let x = x_c as isize + camera_pos.0;
+                let y = y_c as isize + camera_pos.1;
+                *pixel = automaton.get_state(x, y);
+            }
         }
+    }
+}
+
+/// The camera's (0,0) position is at the upper-left of the field of view.
+pub struct Camera {
+    position: (isize, isize),
+    size: (f64, f64), // The size is stored as floating-point number because it makes zooming more consistent
+    image: Image
+}
+
+impl Camera {
+    pub fn new(x: isize, y: isize, automaton: &Automaton) -> Camera {
+        let size = (200.0, 50.0);
+        Camera {
+            position: (x, y),
+            size,
+            image: Image::new(size, automaton)
+        }
+    }
+
+    pub fn capture(&mut self, automaton: &Automaton) -> &Image {
+        self.image.capture(self.position, automaton);
+        &self.image
     }
 
     pub fn translate(&mut self, direction: &Direction) {
@@ -57,5 +70,6 @@ impl Camera {
         };
         self.size.0 *= factor;
         self.size.1 *= factor;
+        self.image.resize(self.size);
     }
 }

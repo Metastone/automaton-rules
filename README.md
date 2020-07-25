@@ -52,7 +52,6 @@ The transition 'dead -> aliveaaazerty' refers to the state "aliveaaazerty", but 
 # TODOs
 
 * Make traits for inputs and display in order to allow different displays.
-* avoid systematic camera's image memory reallocation
 * document language
 * add a save / load system to save a current state (and the associated automaton rules attached ?)
 * multi-thread automaton tick & camera capture.
