@@ -7,6 +7,7 @@ use rayon::prelude::*;
 pub struct Cell {
     state: usize,
     index_in_grid: usize,
+    position: (usize, usize)
 }
 
 pub struct Automaton {
@@ -31,7 +32,8 @@ impl Automaton {
         for i in 0..(size.0 * size.1) {
             grid.push(Cell{
                 state: default_state,
-                index_in_grid: i
+                index_in_grid: i,
+                position: get_position(i, *size)
             });
         }
 
@@ -112,10 +114,9 @@ impl Automaton {
         let grid = &self.grid;
 
         self.grid_next.par_iter_mut().for_each(|cell| {
-            let position = get_position(cell.index_in_grid, rules.world_size);
             let mut rng = rand::thread_rng();
             for (state_origin, state_destination, conditions) in &rules.transitions {
-                if state_origin == &grid[cell.index_in_grid].state && rules.evaluate_conditions(grid, position, conditions, &mut rng) {
+                if state_origin == &grid[cell.index_in_grid].state && rules.evaluate_conditions(grid, cell.position, conditions, &mut rng) {
                     cell.state = *state_destination;
                     break;
                 }
