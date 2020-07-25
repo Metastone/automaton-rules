@@ -6,4 +6,5 @@ pub mod compiler;
 pub mod automaton;
 pub mod camera;
 pub mod display;
+pub mod terminal_display;
 pub mod inputs;

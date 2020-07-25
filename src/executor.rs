@@ -5,14 +5,14 @@ extern crate rand;
 use std::{
     time::{Instant, Duration},
     thread::sleep,
-    io,
 };
 use crate::compiler::semantic::{Rules, parse};
 use crate::automaton::Automaton;
 use crate::camera::Camera;
+use crate::display::DummyDisplay;
+use crate::terminal_display::TerminalDisplay;
 use crate::display::Display;
 use crate::inputs::{Inputs, UserAction};
-use termion::raw::IntoRawMode;
 
 pub enum MaxIterationCount {
     Infinite,
@@ -44,13 +44,8 @@ pub fn execute(conf: &Conf) {
 fn execute_rules(conf: &Conf, rules: Rules) {
     let mut automaton = Automaton::new(rules);
     let mut camera = Camera::new(0, 0, &automaton);
-    let mut display = Display::new();
+    let mut display: Box<dyn Display> = if conf.with_display { Box::new(TerminalDisplay::new()) } else { Box::new(DummyDisplay::new()) };
     let mut inputs = Inputs::new();
-
-    let _stdout = io::stdout().into_raw_mode().unwrap();
-    if conf.with_display {
-        display.init();
-    }
 
     let mut start = Instant::now();
     let mut runtime_duration = Duration::new(0, 0);
@@ -93,9 +88,7 @@ fn execute_rules(conf: &Conf, rules: Rules) {
         };
     }
 
-    if conf.with_display {
-        display.clean();
-    }
+    display.clean();
 
     if !pause {
         runtime_duration += start.elapsed();
