@@ -1,11 +1,12 @@
 use crate::camera::Image;
 
 pub trait Display {
-    fn render(&mut self, image: & Image);
+    fn render(&mut self, _image: & Image) {}
 
-    fn clean(&mut self);
+    fn clean(&mut self) {}
 }
 
+#[derive(Default)]
 pub struct DummyDisplay;
 
 impl DummyDisplay {
@@ -14,8 +15,5 @@ impl DummyDisplay {
     }
 }
 
-impl Display for DummyDisplay {
-    fn render(&mut self, _image: & Image) {}
+impl Display for DummyDisplay {}
 
-    fn clean(&mut self) {}
-}

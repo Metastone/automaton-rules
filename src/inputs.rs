@@ -1,7 +1,15 @@
+use std::{
+    io,
+    io::Stdout,
+};
 use termion::{
     AsyncReader,
     event::Key,
     input::TermRead
+};
+use termion::raw::{
+    IntoRawMode,
+    RawTerminal,
 };
 
 pub enum Direction {
@@ -25,13 +33,21 @@ pub enum UserAction {
 }
 
 pub struct Inputs {
-    keys: termion::input::Keys<AsyncReader>
+    keys: termion::input::Keys<AsyncReader>,
+    _stdout: RawTerminal<Stdout>
+}
+
+impl Default for Inputs {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl Inputs {
     pub fn new() -> Inputs {
         Inputs {
-            keys: termion::async_stdin().keys()
+            keys: termion::async_stdin().keys(),
+            _stdout: io::stdout().into_raw_mode().unwrap()
         }
     }
 

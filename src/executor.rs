@@ -10,6 +10,7 @@ use crate::compiler::semantic::{Rules, parse};
 use crate::automaton::Automaton;
 use crate::camera::Camera;
 use crate::display::DummyDisplay;
+use crate::rendy_display::RendyDisplay;
 use crate::terminal_display::TerminalDisplay;
 use crate::display::Display;
 use crate::inputs::{Inputs, UserAction};
@@ -44,8 +45,8 @@ pub fn execute(conf: &Conf) {
 fn execute_rules(conf: &Conf, rules: Rules) {
     let mut automaton = Automaton::new(rules);
     let mut camera = Camera::new(0, 0, &automaton);
-    let mut display: Box<dyn Display> = if conf.with_display { Box::new(TerminalDisplay::new()) } else { Box::new(DummyDisplay::new()) };
     let mut inputs = Inputs::new();
+    let mut display: Box<dyn Display> = create_display(conf);
 
     let mut start = Instant::now();
     let mut runtime_duration = Duration::new(0, 0);
@@ -94,4 +95,16 @@ fn execute_rules(conf: &Conf, rules: Rules) {
         runtime_duration += start.elapsed();
     }
     println!("Over. {} iterations / s", (i as f32 / runtime_duration.as_millis() as f32)*1000.0);
+}
+
+fn create_display(conf: &Conf) -> Box<dyn Display> {
+    if conf.with_display {
+        if cfg!(feature = "rendy_rendering") {
+            Box::new(RendyDisplay::new())
+        } else {
+            Box::new(TerminalDisplay::new())
+        }
+    } else {
+        Box::new(DummyDisplay::new())
+    }
 }

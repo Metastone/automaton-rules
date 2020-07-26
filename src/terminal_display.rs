@@ -32,6 +32,12 @@ impl TerminalDisplay {
     }
 }
 
+impl Default for TerminalDisplay {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl Display for TerminalDisplay {
 
     fn render(&mut self, image: & Image) {
