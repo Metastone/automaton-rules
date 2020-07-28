@@ -1,4 +1,4 @@
 #!/bin/bash
 
-cargo run --release --features rendy_rendering $1
+cargo run --release --features wgpu_rendering $1
 

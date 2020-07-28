@@ -10,10 +10,13 @@ use crate::compiler::semantic::{Rules, parse};
 use crate::automaton::Automaton;
 use crate::camera::Camera;
 use crate::display::DummyDisplay;
-use crate::rendy_display::RendyDisplay;
 use crate::terminal_display::TerminalDisplay;
 use crate::display::Display;
 use crate::inputs::{Inputs, UserAction};
+
+#[cfg(feature = "wgpu_rendering")]
+use crate::wgpu_display::WgpuDisplay;
+
 
 pub enum MaxIterationCount {
     Infinite,
@@ -99,11 +102,11 @@ fn execute_rules(conf: &Conf, rules: Rules) {
 
 fn create_display(conf: &Conf) -> Box<dyn Display> {
     if conf.with_display {
-        if cfg!(feature = "rendy_rendering") {
-            Box::new(RendyDisplay::new())
-        } else {
-            Box::new(TerminalDisplay::new())
-        }
+        #[cfg(feature = "wgpu_rendering")]
+        return Box::new(WgpuDisplay::new());
+
+        #[cfg(not(feature = "wgpu_rendering"))]
+        return Box::new(TerminalDisplay::new());
     } else {
         Box::new(DummyDisplay::new())
     }
